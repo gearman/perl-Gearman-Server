@@ -139,6 +139,7 @@ use fields (
             'can_do_iter',
             'read_buf',
             'sleeping',   # 0/1:  they've said they're sleeping and we haven't woken them up
+            'doing',  # { $job_handle => Job }
 	    );
 
 
@@ -181,9 +182,6 @@ sub new {
 
     $jobOfHandle{$self->{'handle'}} = $self;
 
-    #use Data::Dumper;
-    #print "JOB_QUEUE = ", Dumper(\%job_queue);
-
     return $self;
 }
 
@@ -214,6 +212,16 @@ sub relay_to_listeners {
     }
 }
 
+sub note_finished {
+    my Job $self = shift;
+    my $success = shift;
+
+    if (length($self->{uniq})) {
+        delete $jobOfUniq{$self->{func}}{$self->{uniq}};
+    }
+}
+
+# accessors:
 sub worker {
     my Job $self = shift;
     return $self->{'worker'} unless @_;
@@ -248,8 +256,6 @@ sub argref {
 #####################################################################
 package Client;
 
-our %can_do;  # job_name -> fd -> client
-
 our %sleepers;  # func -> [ sleepers ]  (wiped on wakeup)
 
 # Class Method:
@@ -261,6 +267,7 @@ sub new {
     $self->{read_buf} = '';
     $self->{sleeping} = 0;
     $self->{can_do} = {};
+    $self->{doing} = {};       # handle -> Job
     $self->{can_do_list} = [];
     $self->{can_do_iter} = 0;  # numeric iterator for where we start looking for jobs
 
@@ -285,6 +292,14 @@ sub WakeUpSleepers {
 
 sub close {
     my Client $self = shift;
+
+    while (my ($handle, $job) = each %{$self->{doing}}) {
+        my $msg = Gearman::Util::pack_res_command("work_fail", $handle);
+        $job->relay_to_listeners($msg);
+        $job->note_finished(0);
+    }
+
+    $self->CMD_reset_abilities;
 
     $self->SUPER::close;
 }
@@ -358,14 +373,14 @@ sub CMD_work_status {
     my $ar = shift;
     my ($handle, $nu, $de) = split(/\0/, $$ar);
 
-    my $job = Job->GetByHandle($handle);
+    my $job = $self->{doing}{$handle};
     return $self->error_packet("not_worker") unless $job && $job->worker == $self;
+
+    print "work_status(", $job->handle, " / ", $job->func, ") = $nu/$de\n";
 
     my $msg = Gearman::Util::pack_res_command("work_status", $$ar);
     $job->relay_to_listeners($msg);
     $job->status([$nu, $de]);
-
-    print "Work on $handle:  $nu/$de\n";
     return 1;
 }
 
@@ -376,13 +391,13 @@ sub CMD_work_complete {
     $$ar =~ s/^(.+?)\0//;
     my $handle = $1;
 
-    my $job = Job->GetByHandle($handle);
+    my $job = delete $self->{doing}{$handle};
     return $self->error_packet("not_worker") unless $job && $job->worker == $self;
 
     my $msg = Gearman::Util::pack_res_command("work_complete", join("\0", $handle, $$ar));
     $job->relay_to_listeners($msg);
+    $job->note_finished(1);
 
-    print "Work on $handle is done:  $$ar\n";
     return 1;
 }
 
@@ -413,6 +428,7 @@ sub CMD_grab_job {
         $job = Job->Grab($job_to_grab);
         if ($job) {
             $job->worker($self);
+            $self->{doing}{$job->handle} = $job;
             return $self->res_packet("job_assign",
                                      join("\0",
                                           $job->handle,
@@ -427,26 +443,78 @@ sub CMD_grab_job {
 sub CMD_can_do {
     my Client $self = shift;
     my $ar = shift;
-    my $fd = $self->{fd};
 
-    $can_do{$$ar}->{$fd} = $self;
     $self->{can_do}->{$$ar} = 1;
+    $self->_setup_can_do_list;
+}
+
+sub CMD_cant_do {
+    my Client $self = shift;
+    my $ar = shift;
+
+    delete $self->{can_do}->{$$ar};
+    $self->_setup_can_do_list;
+}
+
+sub CMD_get_status {
+    my Client $self = shift;
+    my $ar = shift;
+    my $job = Job->GetByHandle($$ar);
+
+    # handles can't contain nulls
+    return if $$ar =~ /\0/;
+
+    my ($known, $running, $num, $den);
+    $known = 0;
+    $running = 0;
+    if ($job) {
+        $known = 1;
+        $running = $job->worker ? 1 : 0;
+        if (my $stat = $job->status) {
+            ($num, $den) = @$stat;
+        }
+    }
+
+    print "get_status($$ar) = ($known, $running, $num, $den);\n";
+
+    $self->res_packet("status_res", join("\0",
+                                         $$ar,
+                                         $known,
+                                         $running,
+                                         $num,
+                                         $den));
+}
+
+sub CMD_reset_abilities {
+    my Client $self = shift;
+
+    $self->{can_do} = {};
+    $self->_setup_can_do_list;
+}
+
+sub _setup_can_do_list {
+    my Client $self = shift;
     $self->{can_do_list} = [ keys %{$self->{can_do}} ];
     $self->{can_do_iter} = 0;
 }
 
-sub CMD_submit_job {
+sub CMD_submit_job    {  push @_, 1; &_cmd_submit_job; }
+sub CMD_submit_job_bg {  push @_, 0; &_cmd_submit_job; }
+
+sub _cmd_submit_job {
     my Client $self = shift;
     my $ar = shift;
+    my $subscribe = shift;
+
+    print "Subscribe = $subscribe\n";
 
     return $self->error_packet("invalid_args", "No func/uniq header [$$ar].")
         unless $$ar =~ s/^(.+?)\0(.*?)\0//;
 
     my ($func, $uniq) = ($1, $2);
-    print "submit_job: FUNC=($func), UNIQ=($uniq), args=($$ar)\n";
 
     my $job = Job->new($func, $uniq, $ar, $self);
-    $job->add_listener($self);
+    $job->add_listener($self) if $subscribe;
     $self->res_packet("job_created", $job->handle);
     Client->WakeUpSleepers($func);
 }
@@ -478,8 +546,6 @@ sub process_cmd {
     print "Error: $@\n";
     return $self->error_packet("server_error", $@);
 }
-
-
 
 # Client
 sub event_err { my $self = shift; $self->close; }
