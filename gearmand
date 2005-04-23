@@ -118,6 +118,7 @@ use fields (
             'worker',
             'handle',
             'status',  # [1, 100]
+            'require_listener',
             );
 
 our $handle_ct = 0;
@@ -150,7 +151,7 @@ package Job;
 
 sub new {
     my Job $self = shift;
-    my ($func, $uniq, $argref) = @_;
+    my ($func, $uniq, $argref, $highpri) = @_;
 
     $self = fields::new($self) unless ref $self;
 
@@ -171,6 +172,7 @@ sub new {
 
     $self->{'func'} = $func;
     $self->{'uniq'} = $uniq;
+    $self->{'require_listener'} = 1;
     $self->{'argref'} = $argref;
     $self->{'listeners'} = [];
 
@@ -178,7 +180,11 @@ sub new {
     $self->{'handle'} = $handle_base . $handle_ct;
 
     my $jq = ($job_queue{$func} ||= []);
-    push @$jq, $self;
+    if ($highpri) {
+        unshift @$jq, $self;
+    } else {
+        push @$jq, $self;
+    }
 
     $jobOfHandle{$self->{'handle'}} = $self;
 
@@ -188,9 +194,23 @@ sub new {
 sub Grab {
     my ($class, $func) = @_;
     return undef unless $job_queue{$func};
-    my $job = shift @{$job_queue{$func}};
-    delete $job_queue{$func} unless @{$job_queue{$func}};
-    return $job;
+
+    my $empty = sub {
+        delete $job_queue{$func};
+        return undef;
+    };
+
+    my Job $job;
+    while (1) {
+        $job = shift @{$job_queue{$func}};
+        return $empty->() unless $job;
+        return $job unless $job->{require_listener};
+
+        foreach my Client $c (@{$job->{listeners}}) {
+            return $job unless $c->{closed};
+        }
+        $job->note_finished(0);
+    }
 }
 
 sub GetByHandle {
@@ -226,6 +246,11 @@ sub worker {
     my Job $self = shift;
     return $self->{'worker'} unless @_;
     return $self->{'worker'} = shift;
+}
+sub require_listener {
+    my Job $self = shift;
+    return $self->{'require_listener'} unless @_;
+    return $self->{'require_listener'} = shift;
 }
 
 # takes arrayref of [numerator,denominator]
@@ -500,11 +525,13 @@ sub _setup_can_do_list {
 
 sub CMD_submit_job    {  push @_, 1; &_cmd_submit_job; }
 sub CMD_submit_job_bg {  push @_, 0; &_cmd_submit_job; }
+sub CMD_submit_job_high {  push @_, 1, 1; &_cmd_submit_job; }
 
 sub _cmd_submit_job {
     my Client $self = shift;
     my $ar = shift;
     my $subscribe = shift;
+    my $high_pri = shift;
 
     print "Subscribe = $subscribe\n";
 
@@ -513,8 +540,15 @@ sub _cmd_submit_job {
 
     my ($func, $uniq) = ($1, $2);
 
-    my $job = Job->new($func, $uniq, $ar, $self);
-    $job->add_listener($self) if $subscribe;
+    my $job = Job->new($func, $uniq, $ar, $high_pri);
+
+    if ($subscribe) {
+        $job->add_listener($self);
+    } else {
+        # background mode
+        $job->require_listener(0);
+    }
+
     $self->res_packet("job_created", $job->handle);
     Client->WakeUpSleepers($func);
 }
