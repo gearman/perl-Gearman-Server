@@ -426,6 +426,19 @@ sub CMD_work_complete {
     return 1;
 }
 
+sub CMD_work_fail {
+    my Client $self = shift;
+    my $ar = shift;
+    my $handle = $$ar;
+    my $job = delete $self->{doing}{$handle};
+    return $self->error_packet("not_worker") unless $job && $job->worker == $self;
+
+    my $msg = Gearman::Util::pack_res_command("work_fail", $handle);
+    $job->relay_to_listeners($msg);
+    $job->note_finished(1);
+    return 1;
+}
+
 sub CMD_pre_sleep {
     my Client $self = shift;
     $self->{'sleeping'} = 1;
