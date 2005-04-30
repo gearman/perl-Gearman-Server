@@ -454,6 +454,11 @@ sub CMD_grab_job {
     my $job;
     my $can_do_size = scalar @{$self->{can_do_list}};
 
+    unless ($can_do_size) {
+        $self->res_packet("no_job");
+        return;
+    }
+
     # the offset where we start asking for jobs, to prevent starvation
     # of some job types.
     $self->{can_do_iter} = ($self->{can_do_iter} + 1) % $can_do_size;
