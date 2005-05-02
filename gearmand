@@ -239,6 +239,7 @@ sub note_finished {
     if (length($self->{uniq})) {
         delete $jobOfUniq{$self->{func}}{$self->{uniq}};
     }
+    delete $jobOfHandle{$self->{handle}};
 }
 
 # accessors:
@@ -401,8 +402,6 @@ sub CMD_work_status {
     my $job = $self->{doing}{$handle};
     return $self->error_packet("not_worker") unless $job && $job->worker == $self;
 
-    print "work_status(", $job->handle, " / ", $job->func, ") = $nu/$de\n";
-
     my $msg = Gearman::Util::pack_res_command("work_status", $$ar);
     $job->relay_to_listeners($msg);
     $job->status([$nu, $de]);
@@ -442,7 +441,16 @@ sub CMD_work_fail {
 sub CMD_pre_sleep {
     my Client $self = shift;
     $self->{'sleeping'} = 1;
+
     foreach my $cd (@{$self->{can_do_list}}) {
+
+        # immediately wake the sleeper up if there are things to be done
+        if ($job_queue{$cd}) {
+            $self->res_packet("noop");
+            $self->{sleeping} = 0;
+            return;
+        }
+
         push @{$sleepers{$cd} ||= []}, $self;
     }
     return 1;
@@ -480,6 +488,7 @@ sub CMD_grab_job {
                                           ));
         }
     }
+
     $self->res_packet("no_job");
 }
 
@@ -518,8 +527,6 @@ sub CMD_get_status {
         }
     }
 
-    print "get_status($$ar) = ($known, $running, $num, $den);\n";
-
     $self->res_packet("status_res", join("\0",
                                          $$ar,
                                          $known,
@@ -550,8 +557,6 @@ sub _cmd_submit_job {
     my $ar = shift;
     my $subscribe = shift;
     my $high_pri = shift;
-
-    print "Subscribe = $subscribe\n";
 
     return $self->error_packet("invalid_args", "No func/uniq header [$$ar].")
         unless $$ar =~ s/^(.+?)\0(.*?)\0//;
