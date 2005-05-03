@@ -141,6 +141,8 @@ use fields (
             'read_buf',
             'sleeping',   # 0/1:  they've said they're sleeping and we haven't woken them up
             'doing',  # { $job_handle => Job }
+            'client_id',  # opaque string, no whitespace.  workers give this so checker scripts 
+                          # can tell apart the same worker connected to multiple jobservers.
 	    );
 
 
@@ -284,6 +286,8 @@ package Client;
 
 our %sleepers;  # func -> [ sleepers ]  (wiped on wakeup)
 
+our %client_map;  # fd -> Client object
+
 # Class Method:
 sub new {
     my Client $self = shift;
@@ -296,7 +300,9 @@ sub new {
     $self->{doing} = {};       # handle -> Job
     $self->{can_do_list} = [];
     $self->{can_do_iter} = 0;  # numeric iterator for where we start looking for jobs
+    $self->{client_id} = "-";
 
+    $client_map{$self->{fd}} = $self;
 
     return $self;
 }
@@ -325,6 +331,7 @@ sub close {
         $job->note_finished(0);
     }
 
+    delete $client_map{$self->{fd}};
     $self->CMD_reset_abilities;
 
     $self->SUPER::close;
@@ -376,7 +383,7 @@ sub process_line {
         $cmd = lc($cmd);
 
         no strict 'refs';
-        my $cmd_handler = *{"cmd_$cmd"}{CODE};
+        my $cmd_handler = *{"TXTCMD_$cmd"}{CODE};
         if ($cmd_handler) {
             my $args = decode_url_args(\$args);
             $cmd_handler->($self, $args);
@@ -385,6 +392,18 @@ sub process_line {
     }
 
     return $self->err_line('unknown_command');
+}
+
+sub TXTCMD_workers {
+    my Client $self = shift;
+    my $args = shift;
+
+    foreach my $fd (sort { $a <=> $b } keys %client_map) {
+        my Client $cl = $client_map{$fd};
+        $self->write("$fd " . $cl->peer_ip_string . " $cl->{client_id} : @{$cl->{can_do_list}}\n");
+
+    }
+    $self->write(".\n");
 }
 
 sub CMD_echo_req {
@@ -498,6 +517,15 @@ sub CMD_can_do {
 
     $self->{can_do}->{$$ar} = 1;
     $self->_setup_can_do_list;
+}
+
+sub CMD_set_client_id {
+    my Client $self = shift;
+    my $ar = shift;
+
+    $self->{client_id} = $$ar;
+    $self->{client_id} =~ s/\s+//g;
+    $self->{client_id} = "-" unless length $self->{client_id};
 }
 
 sub CMD_cant_do {
