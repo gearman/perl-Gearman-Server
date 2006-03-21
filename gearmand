@@ -1,10 +1,8 @@
 #!/usr/bin/perl
 #
-# Gearman
+# Gearman: distributed job manager
 #
-# Status: 2005-04-13
-#
-# Copyright 2005, Danga Interactive
+# Copyright 2005-2006, Danga Interactive
 #
 # Authors:
 #   Brad Fitzpatrick <brad@danga.com>
@@ -22,9 +20,9 @@ use IO::Socket::INET;
 use POSIX ();
 use lib '../lib';
 use Gearman::Util;
-
-use vars qw($DEBUG);
+use vars qw($DEBUG $VERSION);
 $DEBUG = 0;
+$VERSION = "0.2";
 
 my (
     $daemonize,
