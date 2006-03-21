@@ -63,7 +63,7 @@ my $accept_handler = sub {
     return unless $csock;
 
     printf("Listen child making a Client for %d.\n", fileno($csock))
-	if $DEBUG;
+        if $DEBUG;
 
     IO::Handle::blocking($csock, 0);
     setsockopt($csock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
@@ -141,9 +141,9 @@ use fields (
             'read_buf',
             'sleeping',   # 0/1:  they've said they're sleeping and we haven't woken them up
             'doing',  # { $job_handle => Job }
-            'client_id',  # opaque string, no whitespace.  workers give this so checker scripts 
+            'client_id',  # opaque string, no whitespace.  workers give this so checker scripts
                           # can tell apart the same worker connected to multiple jobservers.
-	    );
+            );
 
 
 #####################################################################
@@ -371,6 +371,12 @@ sub event_read {
             $found_cmd = 0;
         }
     } while ($found_cmd);
+}
+
+sub event_write {
+    my $self = shift;
+    my $done = $self->write(undef);
+    $self->watch_write(0) if $done;
 }
 
 # line-based commands
