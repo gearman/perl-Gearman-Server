@@ -1,0 +1,5 @@
+0.30  2006-06-27
+
+        * fix memory leak with sleepers list.  change it from list to hash
+          so there can't be dups, as there were before, when a worker
+          could do multiple functions.

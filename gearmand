@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Gearman: distributed job manager
+# Gearman: distributed function call dispatcher/multiplexer
 #
 # Copyright 2005-2006, Danga Interactive
 #
@@ -22,7 +22,7 @@ use lib '../lib';
 use Gearman::Util;
 use vars qw($DEBUG $VERSION);
 $DEBUG = 0;
-$VERSION = "0.2";
+$VERSION = "0.30";
 
 my (
     $daemonize,
@@ -282,7 +282,7 @@ sub argref {
 #####################################################################
 package Client;
 
-our %sleepers;  # func -> [ sleepers ]  (wiped on wakeup)
+our %sleepers;  # func -> { "Client=HASH(0xdeadbeef)" => Client }
 
 our %client_map;  # fd -> Client object
 
@@ -308,13 +308,15 @@ sub new {
 # Class Method:
 sub WakeUpSleepers {
     my ($class, $func) = @_;
-    return unless $sleepers{$func};
-    my Client $c;
-    foreach $c (@{$sleepers{$func}}) {
+    my $sleepmap = $sleepers{$func} or return;
+
+    foreach my $addr (keys %$sleepmap) {
+        my Client $c = $sleepmap->{$addr};
         next if $c->{closed} || ! $c->{sleeping};
         $c->res_packet("noop");
         $c->{sleeping} = 0;
     }
+
     delete $sleepers{$func};
     return;
 }
@@ -474,7 +476,8 @@ sub CMD_pre_sleep {
             return;
         }
 
-        push @{$sleepers{$cd} ||= []}, $self;
+        my $sleepmap = ($sleepers{$cd} ||= {});
+        $sleepmap->{"$self"} ||= $self;
     }
     return 1;
 }
