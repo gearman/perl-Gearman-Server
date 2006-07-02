@@ -7,7 +7,7 @@ WriteMakefile(
               EXE_FILES    => ['gearmand'],
               PREREQ_PM    => {
                                'Gearman::Util' => 0,
-                               'Danga::Socket' => 1.50,,
+                               'Danga::Socket' => 1.50,
                               },
 
               ( $] >= 5.005 ?
