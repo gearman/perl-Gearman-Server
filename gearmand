@@ -1,16 +1,42 @@
 #!/usr/bin/perl
-#
-# Gearman: distributed function call dispatcher/multiplexer
-#
-# Copyright 2005-2006, Danga Interactive
-#
-# Authors:
-#   Brad Fitzpatrick <brad@danga.com>
-#   Brad Whitaker <whitaker@danga.com>
-#
-# License:
-#   terms of Perl itself.
-#
+
+=head1 NAME
+
+gearmand - Gearman client/worker connector.
+
+=head1 SYNOPSIS
+
+ gearmand --daemon
+
+=head1 DESCRIPTION
+
+You run the gearmand server (or more likely, many of them for both
+high-availability and load balancing), then have workers (using
+Gearman::Worker from the Gearman module) register their ability to do
+certain functions to all of them, and then clients (using either the
+blocking or async versions) request work to be done from one of the
+gearmand servers.
+
+The servers connects them, multiplexing duplicate requests as
+requested, etc.
+
+=head1 COPYRIGHT
+
+Copyright 2005-2006, Danga Interactive
+
+You're granted a license to use it under the same terms as Perl itself.
+
+=head1 WARRANTY
+
+This is free software. IT COMES WITHOUT WARRANTY OF ANY KIND.
+
+=head1 AUTHORS
+
+Brad Fitzpatrick <brad@danga.com>
+
+Brad Whitaker <whitaker@danga.com>
+
+=cut
 
 use strict;
 use Getopt::Long;
@@ -501,7 +527,7 @@ sub CMD_grab_job {
         my $idx = ($tried + $self->{can_do_iter}) % $can_do_size;
         $tried++;
         my $job_to_grab = $self->{can_do_list}->[$idx];
-        $job = Job->Grab($job_to_grab);
+        $job = Gearman::Server::Job->Grab($job_to_grab);
         if ($job) {
             $job->worker($self);
             $self->{doing}{$job->handle} = $job;
@@ -545,7 +571,7 @@ sub CMD_cant_do {
 sub CMD_get_status {
     my Gearman::Server::Client $self = shift;
     my $ar = shift;
-    my $job = Job->GetByHandle($$ar);
+    my $job = Gearman::Server::Job->GetByHandle($$ar);
 
     # handles can't contain nulls
     return if $$ar =~ /\0/;
@@ -597,7 +623,7 @@ sub _cmd_submit_job {
 
     my ($func, $uniq) = ($1, $2);
 
-    my $job = Job->new($func, $uniq, $ar, $high_pri);
+    my $job = Gearman::Server::Job->new($func, $uniq, $ar, $high_pri);
 
     if ($subscribe) {
         $job->add_listener($self);
