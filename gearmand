@@ -44,11 +44,10 @@ use Carp;
 use Danga::Socket;
 use IO::Socket::INET;
 use POSIX ();
-use lib '../lib';
 use Gearman::Util;
 use vars qw($DEBUG $VERSION);
 $DEBUG = 0;
-$VERSION = "1.00";
+$VERSION = "1.01";
 
 my (
     $daemonize,
@@ -92,11 +91,11 @@ my $accept_handler = sub {
     IO::Handle::blocking($csock, 0);
     setsockopt($csock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
 
-    my $client = Client->new($csock);
+    my $client = Gearman::Server::Client->new($csock);
     $client->watch_read(1);
 };
 
-Client->OtherFds(fileno($server) => $accept_handler);
+Gearman::Server::Client->OtherFds(fileno($server) => $accept_handler);
 
 sub daemonize {
     my($pid, $sess_id, $i);
@@ -131,7 +130,7 @@ sub daemonize {
 
 #####################################################################
 ### Job definition
-package Job;
+package Gearman::Server::Job;
 use Sys::Hostname;
 
 use fields (
@@ -154,7 +153,7 @@ our %jobOfUniq;   # func -> uniq -> Job
 
 #####################################################################
 ### Client definition
-package Client;
+package Gearman::Server::Client;
 
 use Danga::Socket;
 use base 'Danga::Socket';
@@ -173,10 +172,10 @@ use fields (
 #####################################################################
 ### J O B   C L A S S
 #####################################################################
-package Job;
+package Gearman::Server::Job;
 
 sub new {
-    my Job $self = shift;
+    my Gearman::Server::Job $self = shift;
     my ($func, $uniq, $argref, $highpri) = @_;
 
     $self = fields::new($self) unless ref $self;
@@ -226,13 +225,13 @@ sub Grab {
         return undef;
     };
 
-    my Job $job;
+    my Gearman::Server::Job $job;
     while (1) {
         $job = shift @{$job_queue{$func}};
         return $empty->() unless $job;
         return $job unless $job->{require_listener};
 
-        foreach my Client $c (@{$job->{listeners}}) {
+        foreach my Gearman::Server::Client $c (@{$job->{listeners}}) {
             return $job unless $c->{closed};
         }
         $job->note_finished(0);
@@ -245,21 +244,21 @@ sub GetByHandle {
 }
 
 sub add_listener {
-    my Job $self = shift;
-    my Client $li = shift;
+    my Gearman::Server::Job $self = shift;
+    my Gearman::Server::Client $li = shift;
     push @{$self->{listeners}}, $li;
 }
 
 sub relay_to_listeners {
-    my Job $self = shift;
-    foreach my Client $c (@{$self->{listeners}}) {
+    my Gearman::Server::Job $self = shift;
+    foreach my Gearman::Server::Client $c (@{$self->{listeners}}) {
         next if $c->{closed};
         $c->write($_[0]);
     }
 }
 
 sub note_finished {
-    my Job $self = shift;
+    my Gearman::Server::Job $self = shift;
     my $success = shift;
 
     if (length($self->{uniq})) {
@@ -270,35 +269,35 @@ sub note_finished {
 
 # accessors:
 sub worker {
-    my Job $self = shift;
+    my Gearman::Server::Job $self = shift;
     return $self->{'worker'} unless @_;
     return $self->{'worker'} = shift;
 }
 sub require_listener {
-    my Job $self = shift;
+    my Gearman::Server::Job $self = shift;
     return $self->{'require_listener'} unless @_;
     return $self->{'require_listener'} = shift;
 }
 
 # takes arrayref of [numerator,denominator]
 sub status {
-    my Job $self = shift;
+    my Gearman::Server::Job $self = shift;
     return $self->{'status'} unless @_;
     return $self->{'status'} = shift;
 }
 
 sub handle {
-    my Job $self = shift;
+    my Gearman::Server::Job $self = shift;
     return $self->{'handle'};
 }
 
 sub func {
-    my Job $self = shift;
+    my Gearman::Server::Job $self = shift;
     return $self->{'func'};
 }
 
 sub argref {
-    my Job $self = shift;
+    my Gearman::Server::Job $self = shift;
     return $self->{'argref'};
 }
 
@@ -306,7 +305,7 @@ sub argref {
 #####################################################################
 ### C L I E N T   C L A S S
 #####################################################################
-package Client;
+package Gearman::Server::Client;
 
 our %sleepers;  # func -> { "Client=HASH(0xdeadbeef)" => Client }
 
@@ -314,7 +313,7 @@ our %client_map;  # fd -> Client object
 
 # Class Method:
 sub new {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     $self = fields::new($self) unless ref $self;
     $self->SUPER::new( @_ );
 
@@ -337,7 +336,7 @@ sub WakeUpSleepers {
     my $sleepmap = $sleepers{$func} or return;
 
     foreach my $addr (keys %$sleepmap) {
-        my Client $c = $sleepmap->{$addr};
+        my Gearman::Server::Client $c = $sleepmap->{$addr};
         next if $c->{closed} || ! $c->{sleeping};
         $c->res_packet("noop");
         $c->{sleeping} = 0;
@@ -349,7 +348,7 @@ sub WakeUpSleepers {
 
 
 sub close {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
 
     while (my ($handle, $job) = each %{$self->{doing}}) {
         my $msg = Gearman::Util::pack_res_command("work_fail", $handle);
@@ -365,7 +364,7 @@ sub close {
 
 # Client
 sub event_read {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
 
     my $bref = $self->read(1024);
     return $self->close unless defined $bref;
@@ -407,7 +406,7 @@ sub event_write {
 
 # line-based commands
 sub process_line {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $line = shift;
 
     if ($line =~ /^(\w+)\s*(.*)/) {
@@ -427,11 +426,11 @@ sub process_line {
 }
 
 sub TXTCMD_workers {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $args = shift;
 
     foreach my $fd (sort { $a <=> $b } keys %client_map) {
-        my Client $cl = $client_map{$fd};
+        my Gearman::Server::Client $cl = $client_map{$fd};
         $self->write("$fd " . $cl->peer_ip_string . " $cl->{client_id} : @{$cl->{can_do_list}}\n");
 
     }
@@ -439,14 +438,14 @@ sub TXTCMD_workers {
 }
 
 sub CMD_echo_req {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $blobref = shift;
 
     return $self->res_packet("echo_res", $$blobref);
 }
 
 sub CMD_work_status {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $ar = shift;
     my ($handle, $nu, $de) = split(/\0/, $$ar);
 
@@ -460,7 +459,7 @@ sub CMD_work_status {
 }
 
 sub CMD_work_complete {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $ar = shift;
 
     $$ar =~ s/^(.+?)\0//;
@@ -477,7 +476,7 @@ sub CMD_work_complete {
 }
 
 sub CMD_work_fail {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $ar = shift;
     my $handle = $$ar;
     my $job = delete $self->{doing}{$handle};
@@ -490,7 +489,7 @@ sub CMD_work_fail {
 }
 
 sub CMD_pre_sleep {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     $self->{'sleeping'} = 1;
 
     foreach my $cd (@{$self->{can_do_list}}) {
@@ -509,7 +508,7 @@ sub CMD_pre_sleep {
 }
 
 sub CMD_grab_job {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
 
     my $job;
     my $can_do_size = scalar @{$self->{can_do_list}};
@@ -545,7 +544,7 @@ sub CMD_grab_job {
 }
 
 sub CMD_can_do {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $ar = shift;
 
     $self->{can_do}->{$$ar} = 1;
@@ -553,7 +552,7 @@ sub CMD_can_do {
 }
 
 sub CMD_set_client_id {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $ar = shift;
 
     $self->{client_id} = $$ar;
@@ -562,7 +561,7 @@ sub CMD_set_client_id {
 }
 
 sub CMD_cant_do {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $ar = shift;
 
     delete $self->{can_do}->{$$ar};
@@ -570,7 +569,7 @@ sub CMD_cant_do {
 }
 
 sub CMD_get_status {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $ar = shift;
     my $job = Gearman::Server::Job->GetByHandle($$ar);
 
@@ -597,14 +596,14 @@ sub CMD_get_status {
 }
 
 sub CMD_reset_abilities {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
 
     $self->{can_do} = {};
     $self->_setup_can_do_list;
 }
 
 sub _setup_can_do_list {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     $self->{can_do_list} = [ keys %{$self->{can_do}} ];
     $self->{can_do_iter} = 0;
 }
@@ -614,7 +613,7 @@ sub CMD_submit_job_bg {  push @_, 0; &_cmd_submit_job; }
 sub CMD_submit_job_high {  push @_, 1, 1; &_cmd_submit_job; }
 
 sub _cmd_submit_job {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $ar = shift;
     my $subscribe = shift;
     my $high_pri = shift;
@@ -634,25 +633,25 @@ sub _cmd_submit_job {
     }
 
     $self->res_packet("job_created", $job->handle);
-    Client->WakeUpSleepers($func);
+    Gearman::Server::Client->WakeUpSleepers($func);
 }
 
 sub res_packet {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my ($code, $arg) = @_;
     $self->write(Gearman::Util::pack_res_command($code, $arg));
     return 1;
 }
 
 sub error_packet {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my ($code, $msg) = @_;
     $self->write(Gearman::Util::pack_res_command("error", "$code\0$msg"));
     return 0;
 }
 
 sub process_cmd {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $cmd = shift;
     my $blob = shift;
 
@@ -670,7 +669,7 @@ sub event_err { my $self = shift; $self->close; }
 sub event_hup { my $self = shift; $self->close; }
 
 sub err_line {
-    my Client $self = shift;
+    my Gearman::Server::Client $self = shift;
     my $err_code = shift;
     my $err_text = {
         'unknown_command' => "Unknown server command",
@@ -718,7 +717,7 @@ sub decode_url_args
 }
 
 package main;
-Client->EventLoop();
+Danga::Socket->EventLoop();
 
 # Local Variables:
 # mode: perl

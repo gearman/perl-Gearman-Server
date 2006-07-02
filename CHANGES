@@ -1,3 +1,13 @@
+1.01  2006-07-01
+
+        * Artur Bergman backed out some changes seconds before I did
+          the 1.00 release.  this puts them back in.
+
+1.00  2006-07-01
+
+        * the get-it-on-CPAN-finally release.  but forgot this changes
+          entry.
+
 0.30  2006-06-27
 
         * fix memory leak with sleepers list.  change it from list to hash
