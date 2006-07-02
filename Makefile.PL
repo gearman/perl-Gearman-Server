@@ -6,7 +6,8 @@ WriteMakefile(
               VERSION_FROM => 'gearmand', # finds $VERSION
               EXE_FILES    => ['gearmand'],
               PREREQ_PM    => {
-                               'Gearman' => 1,
+                               'Gearman::Util' => 0,
+                               'Danga::Socket' => 1.50,,
                               },
 
               ( $] >= 5.005 ?
