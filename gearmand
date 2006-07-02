@@ -48,7 +48,7 @@ use lib '../lib';
 use Gearman::Util;
 use vars qw($DEBUG $VERSION);
 $DEBUG = 0;
-$VERSION = "0.30";
+$VERSION = "1.00";
 
 my (
     $daemonize,
