@@ -437,6 +437,47 @@ sub TXTCMD_workers {
     $self->write(".\n");
 }
 
+sub TXTCMD_status {
+    my Gearman::Server::Client $self = shift;
+
+    my %can;
+
+    foreach my $client (values %client_map) {
+        foreach my $func (@{$client->{can_do_list}}) {
+            $can{$func}++;
+        }
+    }
+
+    my %queued_funcs;
+    my %running_funcs;
+    
+    my %orphan_funcs;
+
+    foreach my $job (values %jobOfHandle) {
+        my $func = $job->func;
+        if ($can{$func}) {
+            $queued_funcs{$func}++;
+            if ($job->worker) {
+                $running_funcs{$func}++;
+            }
+        }
+        else {
+            $orphan_funcs{$func}++;
+        }
+    }
+    
+    while (my ($func, $queued) = each %queued_funcs) {
+        my $running = $running_funcs{$func} || 0;
+        $self->write( "$func\t$queued\t$running\n" );
+    }
+
+    while (my ($func, $queued) = each %orphan_funcs) {
+        $self->write( "$func\t$queued\t-0\n" );
+    }
+    
+    $self->write( ".\n" );
+}
+
 sub CMD_echo_req {
     my Gearman::Server::Client $self = shift;
     my $blobref = shift;
