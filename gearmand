@@ -404,7 +404,8 @@ sub event_write {
     $self->watch_write(0) if $done;
 }
 
-# line-based commands
+# Line based command processor
+
 sub process_line {
     my Gearman::Server::Client $self = shift;
     my $line = shift;
@@ -425,6 +426,16 @@ sub process_line {
     return $self->err_line('unknown_command');
 }
 
+=head1 Line based commands
+
+These commands are used for administrative or statistic tasks to be done on the gearman server. They can be entered using a line based client (telnet, etc.) by connecting to the listening port (7003) and are also intended to be machine parsable.
+
+=head2 WORKERS
+
+Docs to be done later for this function, read the source for this one. Nyah nyah.
+
+=cut
+
 sub TXTCMD_workers {
     my Gearman::Server::Client $self = shift;
     my $args = shift;
@@ -436,6 +447,32 @@ sub TXTCMD_workers {
     }
     $self->write(".\n");
 }
+
+=head2 STATUS
+
+The output format of this function is tab separated columns as follows, followed by a line consisting of a fullstop and a newline (".\n") to indicate the end of output.
+
+=over
+
+=item Function name
+
+A string denoting the name of the function of the job
+
+=item Number in queue
+
+A positive integer indicating the total number of jobs for this function in the queue. This includes currently running ones as well (next column)
+
+=item Number of jobs running
+
+A positive integer showing how many jobs of this function are currently running
+
+=item Number of capable workers
+
+A positive integer denoting the maximum possible count of workers that could be doing this job. Though they may not all be working on it due to other tasks holding them busy.
+
+=back
+
+=cut
 
 sub TXTCMD_status {
     my Gearman::Server::Client $self = shift;
@@ -451,30 +488,20 @@ sub TXTCMD_status {
     my %queued_funcs;
     my %running_funcs;
     
-    my %orphan_funcs;
-
     foreach my $job (values %jobOfHandle) {
         my $func = $job->func;
-        if ($can{$func}) {
-            $queued_funcs{$func}++;
-            if ($job->worker) {
-                $running_funcs{$func}++;
-            }
-        }
-        else {
-            $orphan_funcs{$func}++;
+        $queued_funcs{$func}++;
+        if ($job->worker) {
+            $running_funcs{$func}++;
         }
     }
     
     while (my ($func, $queued) = each %queued_funcs) {
         my $running = $running_funcs{$func} || 0;
-        $self->write( "$func\t$queued\t$running\n" );
+        my $can = $can{$func} || 0;
+        $self->write( "$func\t$queued\t$running\t$can\n" );
     }
 
-    while (my ($func, $queued) = each %orphan_funcs) {
-        $self->write( "$func\t$queued\t-0\n" );
-    }
-    
     $self->write( ".\n" );
 }
 
