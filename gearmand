@@ -39,15 +39,16 @@ Brad Whitaker <whitaker@danga.com>
 =cut
 
 use strict;
+use warnings;
 use Getopt::Long;
 use Carp;
-use Danga::Socket;
+use Danga::Socket 1.52;
 use IO::Socket::INET;
 use POSIX ();
 use Gearman::Util;
 use vars qw($DEBUG $VERSION);
 $DEBUG = 0;
-$VERSION = "1.01";
+$VERSION = "1.02";
 
 my (
     $daemonize,
@@ -158,11 +159,12 @@ package Gearman::Server::Client;
 use Danga::Socket;
 use base 'Danga::Socket';
 use fields (
-            'can_do',  # { $job_name => 1 }
+            'can_do',  # { $job_name => $timeout } $timeout can be undef indicating no timeout
             'can_do_list',
             'can_do_iter',
             'read_buf',
             'sleeping',   # 0/1:  they've said they're sleeping and we haven't woken them up
+            'timer', # Timer for job cancellation
             'doing',  # { $job_handle => Job }
             'client_id',  # opaque string, no whitespace.  workers give this so checker scripts
                           # can tell apart the same worker connected to multiple jobservers.
@@ -255,6 +257,11 @@ sub relay_to_listeners {
         next if $c->{closed};
         $c->write($_[0]);
     }
+}
+
+sub clear_listeners {
+    my Gearman::Server::Job $self = shift;
+    $self->{listeners} = [];
 }
 
 sub note_finished {
@@ -419,7 +426,7 @@ sub process_line {
         if ($cmd_handler) {
             my $args = decode_url_args(\$args);
             $cmd_handler->($self, $args);
-            next;
+            return;
         }
     }
 
@@ -539,6 +546,10 @@ sub CMD_work_complete {
     my $msg = Gearman::Util::pack_res_command("work_complete", join("\0", $handle, $$ar));
     $job->relay_to_listeners($msg);
     $job->note_finished(1);
+    if (my $timer = $self->{timer}) {
+        $timer->cancel;
+        $self->{timer} = undef;
+    }
 
     return 1;
 }
@@ -553,6 +564,11 @@ sub CMD_work_fail {
     my $msg = Gearman::Util::pack_res_command("work_fail", $handle);
     $job->relay_to_listeners($msg);
     $job->note_finished(1);
+    if (my $timer = $self->{timer}) {
+        $timer->cancel;
+        $self->{timer} = undef;
+    }
+
     return 1;
 }
 
@@ -599,6 +615,20 @@ sub CMD_grab_job {
         if ($job) {
             $job->worker($self);
             $self->{doing}{$job->handle} = $job;
+
+            my $timeout = $self->{can_do}->{$job_to_grab};
+            if (defined $timeout) {
+                my $timer = Danga::Socket->AddTimer($timeout, sub {
+                    return $self->error_packet("not_worker") unless $job->worker == $self;
+
+                    my $msg = Gearman::Util::pack_res_command("work_fail", $job->handle);
+                    $job->relay_to_listeners($msg);
+                    $job->note_finished(1);                    
+                    $job->clear_listeners;
+                    $self->{timer} = undef;
+                });
+                $self->{timer} = $timer;
+            }
             return $self->res_packet("job_assign",
                                      join("\0",
                                           $job->handle,
@@ -615,7 +645,22 @@ sub CMD_can_do {
     my Gearman::Server::Client $self = shift;
     my $ar = shift;
 
-    $self->{can_do}->{$$ar} = 1;
+    $self->{can_do}->{$$ar} = undef;
+    $self->_setup_can_do_list;
+}
+
+sub CMD_can_do_timeout {
+    my Gearman::Server::Client $self = shift;
+    my $ar = shift;
+
+    my ($task, $timeout) = $$ar =~ m/([^\0]+)(?:\0(.+))?/;
+
+    if (defined $timeout) {
+        $self->{can_do}->{$task} = $timeout;
+    } else {
+        $self->{can_do}->{$task} = undef;
+    }
+
     $self->_setup_can_do_list;
 }
 
@@ -655,6 +700,9 @@ sub CMD_get_status {
         }
     }
 
+    $num = '' unless defined $num;
+    $den = '' unless defined $den;
+    
     $self->res_packet("status_res", join("\0",
                                          $$ar,
                                          $known,
