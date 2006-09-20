@@ -539,6 +539,15 @@ sub TXTCMD_gladiator {
     $self->write(".\n");
 }
 
+sub TXTCMD_shutdown {
+    my Gearman::Server::Client $self = shift;
+    my $args = shift;
+    if ($args eq "graceful") {
+        $self->write("bye!\n");
+        exit 0;
+    }
+}
+
 sub CMD_echo_req {
     my Gearman::Server::Client $self = shift;
     my $blobref = shift;
