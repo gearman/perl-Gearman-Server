@@ -38,6 +38,7 @@ Brad Whitaker <whitaker@danga.com>
 
 =cut
 
+package Gearmand;
 use strict;
 use warnings;
 BEGIN {
@@ -50,6 +51,8 @@ use IO::Socket::INET;
 use POSIX ();
 use Gearman::Util;
 use vars qw($DEBUG $VERSION);
+use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
+
 $DEBUG = 0;
 $VERSION = "1.02";
 
@@ -69,7 +72,9 @@ Getopt::Long::GetOptions(
 
 daemonize() if $daemonize;
 
-use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
+# true if we've closed listening socket, and we're waiting for a
+# convenient place to kill the process
+our $graceful_shutdown = 0;
 
 $SIG{'PIPE'} = "IGNORE";  # handled manually
 
@@ -88,7 +93,7 @@ my $server = IO::Socket::INET->new(LocalPort => $conf_port,
 IO::Handle::blocking($server, 0);
 
 my $accept_handler = sub {
-    my $csock = $server->accept();
+    my $csock = $server->accept;
     return unless $csock;
 
     printf("Listen child making a Client for %d.\n", fileno($csock))
@@ -102,6 +107,15 @@ my $accept_handler = sub {
 };
 
 Gearman::Server::Client->OtherFds(fileno($server) => $accept_handler);
+
+sub shutdown_graceful {
+    return if $graceful_shutdown;
+
+    my $ofds = Gearman::Server::Client->OtherFds;
+    delete $ofds->{fileno($server)};
+    $server->close;
+    $graceful_shutdown = 1;
+}
 
 sub daemonize {
     my($pid, $sess_id, $i);
@@ -422,15 +436,12 @@ sub process_line {
     my Gearman::Server::Client $self = shift;
     my $line = shift;
 
-    if ($line =~ /^(\w+)\s*(.*)/) {
+    if ($line && $line =~ /^(\w+)\s*(.*)/) {
         my ($cmd, $args) = ($1, $2);
         $cmd = lc($cmd);
-
-        no strict 'refs';
-        my $cmd_handler = *{"TXTCMD_$cmd"}{CODE};
-        if ($cmd_handler) {
-            my $args = decode_url_args(\$args);
-            $cmd_handler->($self, $args);
+        my $code = $self->can("TXTCMD_$cmd");
+        if ($code) {
+            $code->($self, $args);
             return;
         }
     }
@@ -450,7 +461,6 @@ Docs to be done later for this function, read the source for this one. Nyah nyah
 
 sub TXTCMD_workers {
     my Gearman::Server::Client $self = shift;
-    my $args = shift;
 
     foreach my $fd (sort { $a <=> $b } keys %client_map) {
         my Gearman::Server::Client $cl = $client_map{$fd};
@@ -543,8 +553,13 @@ sub TXTCMD_shutdown {
     my Gearman::Server::Client $self = shift;
     my $args = shift;
     if ($args eq "graceful") {
-        $self->write("bye!\n");
+        Gearmand::shutdown_graceful();
+        $self->write("OK\n");
+    } elsif (! $args) {
+        $self->write("OK\n");
         exit 0;
+    } else {
+        $self->err_line('unknown_args');
     }
 }
 
@@ -825,47 +840,18 @@ sub err_line {
     my $err_code = shift;
     my $err_text = {
         'unknown_command' => "Unknown server command",
+        'unknown_args' => "Unknown arguments to server command",
     }->{$err_code};
 
     $self->write("ERR $err_code " . eurl($err_text) . "\r\n");
     return 0;
 }
 
-sub eurl
-{
+sub eurl {
     my $a = $_[0];
     $a =~ s/([^a-zA-Z0-9_\,\-.\/\\\: ])/uc sprintf("%%%02x",ord($1))/eg;
     $a =~ tr/ /+/;
     return $a;
-}
-
-sub durl
-{
-    my ($a) = @_;
-    $a =~ tr/+/ /;
-    $a =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
-    return $a;
-}
-
-sub decode_url_args
-{
-    my $a = shift;
-    my $buffer = ref $a ? $a : \$a;
-    my $ret = {};
-
-    my $pair;
-    my @pairs = split(/&/, $$buffer);
-    my ($name, $value);
-    foreach $pair (@pairs)
-    {
-        ($name, $value) = split(/=/, $pair);
-        $value =~ tr/+/ /;
-        $value =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
-        $name =~ tr/+/ /;
-        $name =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
-        $ret->{$name} .= $ret->{$name} ? "\0$value" : $value;
-    }
-    return $ret;
 }
 
 package main;
