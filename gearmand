@@ -40,6 +40,9 @@ Brad Whitaker <whitaker@danga.com>
 
 use strict;
 use warnings;
+BEGIN {
+    $^P = 0x200;  # Provide informative names to anonymous subroutines
+}
 use Getopt::Long;
 use Carp;
 use Danga::Socket 1.52;
@@ -512,6 +515,28 @@ sub TXTCMD_status {
     }
 
     $self->write( ".\n" );
+}
+
+sub TXTCMD_gladiator {
+    my Gearman::Server::Client $self = shift;
+    my $has_gladiator = eval "use Devel::Gladiator; use Devel::Peek; 1;";
+    if ($has_gladiator) {
+        my $all = Devel::Gladiator::walk_arena();
+        my %ct;
+        foreach my $it (@$all) {
+            $ct{ref $it}++;
+            if (ref $it eq "CODE") {
+                my $name = Devel::Peek::CvGV($it);
+                $ct{$name}++ if $name =~ /ANON/;
+            }
+        }
+        $all = undef;  # required to free memory
+        foreach my $n (sort { $ct{$a} <=> $ct{$b} } keys %ct) {
+            next unless $ct{$n} > 1;
+            $self->write(sprintf("%7d $n\n", $ct{$n}));
+        }
+    }
+    $self->write(".\n");
 }
 
 sub CMD_echo_req {
