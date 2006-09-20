@@ -54,7 +54,7 @@ use vars qw($DEBUG $VERSION);
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
 
 $DEBUG = 0;
-$VERSION = "1.03";
+$VERSION = "1.02";
 
 my (
     $daemonize,
