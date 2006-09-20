@@ -115,6 +115,11 @@ sub shutdown_graceful {
     delete $ofds->{fileno($server)};
     $server->close;
     $graceful_shutdown = 1;
+    shutdown_if_calm();
+}
+
+sub shutdown_if_calm {
+    exit 0 unless Gearman::Server::Job->JobsOutstanding;
 }
 
 sub daemonize {
@@ -259,6 +264,10 @@ sub Grab {
     }
 }
 
+sub JobsOutstanding {
+    return scalar keys %job_queue;
+}
+
 sub GetByHandle {
     my ($class, $handle) = @_;
     return $jobOfHandle{$handle};
@@ -291,6 +300,10 @@ sub note_finished {
         delete $jobOfUniq{$self->{func}}{$self->{uniq}};
     }
     delete $jobOfHandle{$self->{handle}};
+
+    if ($Gearmand::graceful_shutdown) {
+        Gearmand::shutdown_if_calm();
+    }
 }
 
 # accessors:
@@ -553,8 +566,8 @@ sub TXTCMD_shutdown {
     my Gearman::Server::Client $self = shift;
     my $args = shift;
     if ($args eq "graceful") {
-        Gearmand::shutdown_graceful();
         $self->write("OK\n");
+        Gearmand::shutdown_graceful();
     } elsif (! $args) {
         $self->write("OK\n");
         exit 0;
