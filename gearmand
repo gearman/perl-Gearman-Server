@@ -53,14 +53,16 @@ $VERSION = "1.02";
 my (
     $daemonize,
     $nokeepalive,
+    $notify_pid,
    );
 my $conf_port = 7003;
 
 Getopt::Long::GetOptions(
-    'd|daemon'       => \$daemonize,
-    'p|port=i'       => \$conf_port,
-    'debug=i'        => \$DEBUG,
-   );
+                         'd|daemon'       => \$daemonize,
+                         'p|port=i'       => \$conf_port,
+                         'debug=i'        => \$DEBUG,
+                         'notifypid|n=i'  => \$notify_pid,  # for test suite only.
+                         );
 
 daemonize() if $daemonize;
 
@@ -494,7 +496,7 @@ sub TXTCMD_status {
 
     my %queued_funcs;
     my %running_funcs;
-    
+
     foreach my $job (values %jobOfHandle) {
         my $func = $job->func;
         $queued_funcs{$func}++;
@@ -502,7 +504,7 @@ sub TXTCMD_status {
             $running_funcs{$func}++;
         }
     }
-    
+
     while (my ($func, $queued) = each %queued_funcs) {
         my $running = $running_funcs{$func} || 0;
         my $can = $can{$func} || 0;
@@ -623,7 +625,7 @@ sub CMD_grab_job {
 
                     my $msg = Gearman::Util::pack_res_command("work_fail", $job->handle);
                     $job->relay_to_listeners($msg);
-                    $job->note_finished(1);                    
+                    $job->note_finished(1);
                     $job->clear_listeners;
                     $self->{timer} = undef;
                 });
@@ -702,7 +704,7 @@ sub CMD_get_status {
 
     $num = '' unless defined $num;
     $den = '' unless defined $den;
-    
+
     $self->res_packet("status_res", join("\0",
                                          $$ar,
                                          $known,
@@ -833,6 +835,7 @@ sub decode_url_args
 }
 
 package main;
+kill 'USR1', $notify_pid if $notify_pid;
 Danga::Socket->EventLoop();
 
 # Local Variables:
