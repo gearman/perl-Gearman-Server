@@ -1,3 +1,7 @@
+        * weakref client connections in listeners list so they go away.
+          still wondering why the jobs holding them lasted so long.
+          or was it a loop?  time will tell.  go gladiator.
+
 1.02  2006-09-20
 
         * Devel::Gladiator support for tracking elusive memory leak

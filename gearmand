@@ -52,6 +52,7 @@ use POSIX ();
 use Gearman::Util;
 use vars qw($DEBUG $VERSION);
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
+use Scalar::Util ();
 
 $DEBUG = 0;
 $VERSION = "1.02";
@@ -258,7 +259,7 @@ sub Grab {
         return $job unless $job->{require_listener};
 
         foreach my Gearman::Server::Client $c (@{$job->{listeners}}) {
-            return $job unless $c->{closed};
+            return $job if $c && ! $c->{closed};
         }
         $job->note_finished(0);
     }
@@ -276,13 +277,15 @@ sub GetByHandle {
 sub add_listener {
     my Gearman::Server::Job $self = shift;
     my Gearman::Server::Client $li = shift;
+
     push @{$self->{listeners}}, $li;
+    Scalar::Util::weaken($self->{listeners}->[-1]);
 }
 
 sub relay_to_listeners {
     my Gearman::Server::Job $self = shift;
     foreach my Gearman::Server::Client $c (@{$self->{listeners}}) {
-        next if $c->{closed};
+        next if !$c || $c->{closed};
         $c->write($_[0]);
     }
 }
@@ -542,6 +545,7 @@ sub TXTCMD_status {
 
 sub TXTCMD_gladiator {
     my Gearman::Server::Client $self = shift;
+    my $args = shift || "";
     my $has_gladiator = eval "use Devel::Gladiator; use Devel::Peek; 1;";
     if ($has_gladiator) {
         my $all = Devel::Gladiator::walk_arena();
@@ -555,7 +559,7 @@ sub TXTCMD_gladiator {
         }
         $all = undef;  # required to free memory
         foreach my $n (sort { $ct{$a} <=> $ct{$b} } keys %ct) {
-            next unless $ct{$n} > 1;
+            next unless $ct{$n} > 1 || $args eq "all";
             $self->write(sprintf("%7d $n\n", $ct{$n}));
         }
     }
