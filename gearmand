@@ -55,7 +55,7 @@ use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
 use Scalar::Util ();
 
 $DEBUG = 0;
-$VERSION = "1.02";
+$VERSION = "1.03";
 
 my (
     $daemonize,
@@ -578,6 +578,11 @@ sub TXTCMD_shutdown {
     } else {
         $self->err_line('unknown_args');
     }
+}
+
+sub TXTCMD_version {
+    my Gearman::Server::Client $self = shift;
+    $self->write("$Gearmand::VERSION\n");
 }
 
 sub CMD_echo_req {
