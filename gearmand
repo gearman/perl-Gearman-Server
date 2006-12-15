@@ -176,6 +176,7 @@ our $handle_base = "H:" . hostname() . ":";
 our %job_queue;  # job_name -> [Job, Job*]   (key only exists if non-empty)
 our %jobOfHandle;  # handle -> Job
 our %jobOfUniq;   # func -> uniq -> Job
+our %max_queue;   # Explicit maximum jobqueue sizes, by jobtype.
 
 #####################################################################
 ### Client definition
@@ -232,6 +233,17 @@ sub new {
     $self->{'handle'} = $handle_base . $handle_ct;
 
     my $jq = ($job_queue{$func} ||= []);
+
+    if (defined (my $max_queue_size = $max_queue{$func})) {
+        $max_queue_size--; # Subtract one, because we're about to add one more below.
+        while (@$jq > $max_queue_size) {
+            my $delete_job = pop @$jq;
+            my $msg = Gearman::Util::pack_res_command("work_fail", $delete_job->handle);
+            $delete_job->relay_to_listeners($msg);
+            $delete_job->note_finished;
+        }
+    }
+
     if ($highpri) {
         unshift @$jq, $self;
     } else {
@@ -566,6 +578,33 @@ sub TXTCMD_gladiator {
     $self->write(".\n");
 }
 
+=head2 MAXQUEUE function [max_queue_size]
+
+For a given function of job, the maximum queue size is adjusted to be max_queue_size jobs long. A negative value indicates unlimited queue size.
+
+If the max_queue_size value is not supplied then it is unset (and the default maximum queue size will apply to this function).
+
+This function will return OK upon success, and will return ERR incomplete_args upon an invalid number of arguments.
+
+=cut
+
+sub TXTCMD_maxqueue {
+    my Gearman::Server::Client $self = shift;
+    my $args = shift;
+    my ($func, $max) = split /\s+/, $args;
+
+    unless (length $func) {
+        return $self->err_line('incomplete_args');
+    }
+
+    if (length $max) {
+        $max_queue{$func} = ($max < 0) ? undef : $max + 0;
+    } else {
+        delete $max_queue{$func};
+    }
+    $self->write("OK\n");
+}
+
 sub TXTCMD_shutdown {
     my Gearman::Server::Client $self = shift;
     my $args = shift;
@@ -863,6 +902,7 @@ sub err_line {
     my $err_text = {
         'unknown_command' => "Unknown server command",
         'unknown_args' => "Unknown arguments to server command",
+        'incomplete_args' => "An incomplete set of arguments was sent to this command",
     }->{$err_code};
 
     $self->write("ERR $err_code " . eurl($err_text) . "\r\n");
