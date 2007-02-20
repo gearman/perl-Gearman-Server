@@ -55,7 +55,7 @@ use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
 use Scalar::Util ();
 
 $DEBUG = 0;
-$VERSION = "1.03";
+$VERSION = "1.04";
 
 my (
     $daemonize,
