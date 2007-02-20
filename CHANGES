@@ -1,3 +1,5 @@
+        * Add maximum jobqueue size feature, with a test.
+
 1.03 2006-09-25
 
         * "version" text command
