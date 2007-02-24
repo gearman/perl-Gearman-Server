@@ -20,11 +20,34 @@ gearmand servers.
 The servers connects them, multiplexing duplicate requests as
 requested, etc.
 
+=head1 OPTIONS
+
+=over
+
+=item --daemonize 
+
+Make the daemon run in the background (good for init.d scripts, bad
+for running under daemontools/supervise).
+
+=item --port=7003 / -p 7003
+
+Set the port number, defaults to 7003.
+
+=item --pidfile=/some/dir/gearmand.pid
+
+Write a pidfile when starting up
+
+=item --debug=1
+
+Enable debugging (currently the only debug output is when a client or worker connects).
+
+=back
+
 =head1 COPYRIGHT
 
-Copyright 2005-2006, Danga Interactive
+Copyright 2005-2007, Danga Interactive
 
-You're granted a license to use it under the same terms as Perl itself.
+You are granted a license to use it under the same terms as Perl itself.
 
 =head1 WARRANTY
 
@@ -61,6 +84,7 @@ my (
     $daemonize,
     $nokeepalive,
     $notify_pid,
+    $opt_pidfile,
    );
 my $conf_port = 7003;
 
@@ -68,6 +92,7 @@ Getopt::Long::GetOptions(
                          'd|daemon'       => \$daemonize,
                          'p|port=i'       => \$conf_port,
                          'debug=i'        => \$DEBUG,
+			 'pidfile=s'      => \$opt_pidfile,
                          'notifypid|n=i'  => \$notify_pid,  # for test suite only.
                          );
 
@@ -87,6 +112,12 @@ my $server = IO::Socket::INET->new(LocalPort => $conf_port,
                                    Reuse     => 1,
                                    Listen    => 10 )
     or die "Error creating socket: $@\n";
+
+if ($opt_pidfile) {
+  open my $fh, '>', $opt_pidfile or die "Could not open $opt_pidfile: $!";
+  print $fh "$$\n";
+  close $fh;
+}
 
 # Not sure if I'm crazy or not, but I can't see in strace where/how
 # Perl 5.6 sets blocking to 0 without this.  In Perl 5.8, IO::Socket::INET
