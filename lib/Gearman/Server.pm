@@ -2,7 +2,7 @@ package Gearman::Server;
 use strict;
 use Gearman::Server::Client;
 use Gearman::Server::Job;
-use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET SOCK_STREAM);
+use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET SOCK_STREAM AF_UNIX SOCK_STREAM PF_UNSPEC);
 use Carp qw(croak);
 use Sys::Hostname ();
 
@@ -92,6 +92,44 @@ sub note_disconnected_client {
 sub clients {
     my $self = shift;
     return values %{ $self->{client_map} };
+}
+
+sub start_worker {
+    my ($self, $prog) = @_;
+
+    my ($psock, $csock);
+    socketpair($csock, $psock, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
+        or  die "socketpair: $!";
+
+    $csock->autoflush(1);
+    $psock->autoflush(1);
+
+    my $pid = fork;
+    unless (defined $pid) {
+        warn "fork failed: $!\n";
+        return undef;
+    }
+
+    # child process
+    unless ($pid) {
+        local $ENV{'GEARMAN_WORKER_USE_STDIO'} = 1;
+        close(STDIN);
+        close(STDOUT);
+        open(STDIN, '<&', $psock) or die "Unable to dup socketpair to STDIN: $!";
+        open(STDOUT, '>&', $psock) or die "Unable to dup socketpair to STDOUT: $!";
+        exec $prog;
+        die "Exec failed: $!";
+    }
+
+    close($psock);
+    my $sock = $csock;
+
+    my $client = Gearman::Server::Client->new($sock, $self);
+
+    $client->{peer_ip}  = "[$prog]";
+    $client->watch_read(1);
+    $self->{client_map}{$client->{fd}} = $client;
+    return $client;
 }
 
 sub enqueue_job {
