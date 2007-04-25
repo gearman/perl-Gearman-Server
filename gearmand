@@ -61,6 +61,8 @@ use warnings;
 BEGIN {
     $^P = 0x200;  # Provide informative names to anonymous subroutines
 }
+use FindBin;
+use lib "$FindBin::Bin/lib";
 use Gearman::Server;
 
 use Getopt::Long;

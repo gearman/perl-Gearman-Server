@@ -42,7 +42,7 @@ sub new {
 
 sub debug {
     my ($self, $msg) = @_;
-    warn "$msg\n";
+    #warn "$msg\n";
 }
 
 sub create_listening_sock {
@@ -79,7 +79,7 @@ sub setup_listening_sock {
 
 sub new_client {
     my ($self, $sock) = @_;
-    my $client = Gearman::Server::Client->new($sock);
+    my $client = Gearman::Server::Client->new($sock, $self);
     $client->watch_read(1);
     $self->{client_map}{$client->{fd}} = $client;
 }

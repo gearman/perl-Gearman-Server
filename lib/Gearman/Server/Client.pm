@@ -45,7 +45,7 @@ sub close {
         $job->note_finished(0);
     }
 
-    $self->server->note_disconnected_client($self);
+    $self->{server}->note_disconnected_client($self);
 
     $self->CMD_reset_abilities;
 
