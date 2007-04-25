@@ -18,7 +18,7 @@ daemonization.
 
 =over
 
-=item --daemonize
+=item --daemonize / -d
 
 Make the daemon run in the background (good for init.d scripts, bad
 for running under daemontools/supervise).
@@ -53,6 +53,16 @@ Brad Fitzpatrick <brad@danga.com>
 
 Brad Whitaker <whitaker@danga.com>
 
+=head1 SEE ALSO
+
+L<Gearman::Server>
+
+L<Gearman::Client>
+
+L<Gearman::Worker>
+
+L<Gearman::Client::Async>
+
 =cut
 
 package Gearmand;
@@ -70,7 +80,6 @@ use Carp;
 use Danga::Socket 1.52;
 use IO::Socket::INET;
 use POSIX ();
-use Socket qw(IPPROTO_TCP);
 use Gearman::Util;
 use vars qw($DEBUG);
 use Scalar::Util ();
@@ -155,8 +164,6 @@ sub daemonize {
     open(STDERR, "+>&STDIN");
 }
 
-
-package main;
 kill 'USR1', $notify_pid if $notify_pid;
 Danga::Socket->EventLoop();
 
