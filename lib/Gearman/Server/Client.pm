@@ -343,31 +343,31 @@ sub CMD_grab_job {
         my $idx = ($tried + $self->{can_do_iter}) % $can_do_size;
         $tried++;
         my $job_to_grab = $self->{can_do_list}->[$idx];
-        $job = $self->{server}->grab_job($job_to_grab);
-        if ($job) {
-            $job->worker($self);
-            $self->{doing}{$job->handle} = $job;
+        $job = $self->{server}->grab_job($job_to_grab)
+            or next;
 
-            my $timeout = $self->{can_do}->{$job_to_grab};
-            if (defined $timeout) {
-                my $timer = Danga::Socket->AddTimer($timeout, sub {
-                    return $self->error_packet("not_worker") unless $job->worker == $self;
+        $job->worker($self);
+        $self->{doing}{$job->handle} = $job;
 
-                    my $msg = Gearman::Util::pack_res_command("work_fail", $job->handle);
-                    $job->relay_to_listeners($msg);
-                    $job->note_finished(1);
-                    $job->clear_listeners;
-                    $self->{timer} = undef;
-                });
-                $self->{timer} = $timer;
-            }
-            return $self->res_packet("job_assign",
-                                     join("\0",
-                                          $job->handle,
-                                          $job->func,
-                                          ${$job->argref},
-                                          ));
+        my $timeout = $self->{can_do}->{$job_to_grab};
+        if (defined $timeout) {
+            my $timer = Danga::Socket->AddTimer($timeout, sub {
+                return $self->error_packet("not_worker") unless $job->worker == $self;
+
+                my $msg = Gearman::Util::pack_res_command("work_fail", $job->handle);
+                $job->relay_to_listeners($msg);
+                $job->note_finished(1);
+                $job->clear_listeners;
+                $self->{timer} = undef;
+            });
+            $self->{timer} = $timer;
         }
+        return $self->res_packet("job_assign",
+                                 join("\0",
+                                      $job->handle,
+                                      $job->func,
+                                      ${$job->argref},
+                                      ));
     }
 
     $self->res_packet("no_job");
@@ -416,7 +416,7 @@ sub CMD_cant_do {
 sub CMD_get_status {
     my Gearman::Server::Client $self = shift;
     my $ar = shift;
-    my $job = $self->job_by_handle($$ar);
+    my $job = $self->{server}->job_by_handle($$ar);
 
     # handles can't contain nulls
     return if $$ar =~ /\0/;

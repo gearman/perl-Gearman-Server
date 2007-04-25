@@ -138,8 +138,8 @@ sub on_client_sleep {
     foreach my $cd (@{$cl->{can_do_list}}) {
         # immediately wake the sleeper up if there are things to be done
         if ($self->{job_queue}{$cd}) {
-            $self->res_packet("noop");
-            $self->{sleeping} = 0;
+            $cl->res_packet("noop");
+            $cl->{sleeping} = 0;
             return;
         }
 
@@ -190,14 +190,14 @@ sub new_job_handle {
 
 sub job_of_unique {
     my ($self, $func, $uniq) = @_;
-    return undef unless $self->{job_of_unique}{$func};
-    return $self->{job_of_unique}{$func}{$uniq};
+    return undef unless $self->{job_of_uniq}{$func};
+    return $self->{job_of_uniq}{$func}{$uniq};
 }
 
 sub set_unique_job {
     my ($self, $func, $uniq, $job) = @_;
-    $self->{job_of_unique}{$func} ||= {};
-    $self->{job_of_unique}{$func}{$uniq} = $job;
+    $self->{job_of_uniq}{$func} ||= {};
+    $self->{job_of_uniq}{$func}{$uniq} = $job;
 }
 
 sub grab_job {
