@@ -1,3 +1,5 @@
+1.06 2007-04-25
+
         * split up the monolithic gearmand script (which had classes, but
           all internally), into separate files per class, and also make
           a new Gearman::Server class, so Gearman servers can be embedded
