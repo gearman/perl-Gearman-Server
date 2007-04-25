@@ -1,4 +1,25 @@
 package Gearman::Server::Client;
+
+=head1 NAME
+
+Gearman::Server::Client
+
+=head1 NAME
+
+Used by L<Gearman::Server> to instantiate connections from clients.
+Clients speak either a binary protocol, for normal operation (calling
+functions, grabbing function call requests, returning function values,
+etc), or a text-based line protocol, for relatively rare
+administrative / monitoring commands.
+
+The binary protocol commands aren't currently documented. (FIXME) But
+they're well-implemented in L<Gearman::Client>, L<Gearman::Worker>,
+and L<Gearman::Client::Async>, if that's any consolation.
+
+The line-based administrative commands are documented below.
+
+=cut
+
 use strict;
 use Danga::Socket;
 use base 'Danga::Socket';
@@ -33,8 +54,6 @@ sub new {
 
     return $self;
 }
-
-
 
 sub close {
     my Gearman::Server::Client $self = shift;
@@ -95,7 +114,6 @@ sub event_write {
 }
 
 # Line based command processor
-
 sub process_line {
     my Gearman::Server::Client $self = shift;
     my $line = shift;
@@ -113,148 +131,29 @@ sub process_line {
     return $self->err_line('unknown_command');
 }
 
-=head1 Line based commands
+=head1 Binary Protocol Structure
 
-These commands are used for administrative or statistic tasks to be done on the gearman server. They can be entered using a line based client (telnet, etc.) by connecting to the listening port (7003) and are also intended to be machine parsable.
+All binary protocol exchanges between clients (which can be callers,
+workers, or both) and the Gearman server have common packet header:
 
-=head2 WORKERS
+  4 byte magic  -- either "\0REQ" for requests to the server, or
+                   "\0RES" for responses from the server
+  4 byte type   -- network order integer, representing the packet type
+  4 byte length -- network order length, for data segment.
+  data          -- optional, if length is non-zero
 
-Docs to be done later for this function, read the source for this one. Nyah nyah.
+=head1 Binary Protocol Commands
 
-=cut
+=head2 echo_req (type=16)
 
-sub TXTCMD_workers {
-    my Gearman::Server::Client $self = shift;
+A debug command.  The server will reply with the same data, in a echo_res (type=17) packet.
 
-    foreach my $cl (sort { $a->{fd} <=> $b->{fd} } $self->{server}->clients) {
-        my $fd = $cl->{fd};
-        $self->write("$fd " . $cl->peer_ip_string . " $cl->{client_id} : @{$cl->{can_do_list}}\n");
+=head2 (and many more...)
 
-    }
-    $self->write(".\n");
-}
-
-=head2 STATUS
-
-The output format of this function is tab separated columns as follows, followed by a line consisting of a fullstop and a newline (".\n") to indicate the end of output.
-
-=over
-
-=item Function name
-
-A string denoting the name of the function of the job
-
-=item Number in queue
-
-A positive integer indicating the total number of jobs for this function in the queue. This includes currently running ones as well (next column)
-
-=item Number of jobs running
-
-A positive integer showing how many jobs of this function are currently running
-
-=item Number of capable workers
-
-A positive integer denoting the maximum possible count of workers that could be doing this job. Though they may not all be working on it due to other tasks holding them busy.
-
-=back
+FIXME: auto-generate protocol docs from internal Gearman::Util table,
+once annotated with some English?
 
 =cut
-
-sub TXTCMD_status {
-    my Gearman::Server::Client $self = shift;
-
-    my %can;
-
-    foreach my $client ($self->{server}->clients) {
-        foreach my $func (@{$client->{can_do_list}}) {
-            $can{$func}++;
-        }
-    }
-
-    my %queued_funcs;
-    my %running_funcs;
-
-    foreach my $job ($self->{server}->jobs) {
-        my $func = $job->func;
-        $queued_funcs{$func}++;
-        if ($job->worker) {
-            $running_funcs{$func}++;
-        }
-    }
-
-    while (my ($func, $queued) = each %queued_funcs) {
-        my $running = $running_funcs{$func} || 0;
-        my $can = $can{$func} || 0;
-        $self->write( "$func\t$queued\t$running\t$can\n" );
-    }
-
-    $self->write( ".\n" );
-}
-
-sub TXTCMD_gladiator {
-    my Gearman::Server::Client $self = shift;
-    my $args = shift || "";
-    my $has_gladiator = eval "use Devel::Gladiator; use Devel::Peek; 1;";
-    if ($has_gladiator) {
-        my $all = Devel::Gladiator::walk_arena();
-        my %ct;
-        foreach my $it (@$all) {
-            $ct{ref $it}++;
-            if (ref $it eq "CODE") {
-                my $name = Devel::Peek::CvGV($it);
-                $ct{$name}++ if $name =~ /ANON/;
-            }
-        }
-        $all = undef;  # required to free memory
-        foreach my $n (sort { $ct{$a} <=> $ct{$b} } keys %ct) {
-            next unless $ct{$n} > 1 || $args eq "all";
-            $self->write(sprintf("%7d $n\n", $ct{$n}));
-        }
-    }
-    $self->write(".\n");
-}
-
-=head2 MAXQUEUE function [max_queue_size]
-
-For a given function of job, the maximum queue size is adjusted to be max_queue_size jobs long. A negative value indicates unlimited queue size.
-
-If the max_queue_size value is not supplied then it is unset (and the default maximum queue size will apply to this function).
-
-This function will return OK upon success, and will return ERR incomplete_args upon an invalid number of arguments.
-
-=cut
-
-sub TXTCMD_maxqueue {
-    my Gearman::Server::Client $self = shift;
-    my $args = shift;
-    my ($func, $max) = split /\s+/, $args;
-
-    unless (length $func) {
-        return $self->err_line('incomplete_args');
-    }
-
-    $self->{server}->set_max_queue($func, $max);
-    $self->write("OK\n");
-}
-
-sub TXTCMD_shutdown {
-    my Gearman::Server::Client $self = shift;
-    my $args = shift;
-    if ($args eq "graceful") {
-        $self->write("OK\n");
-        Gearmand::shutdown_graceful();
-    } elsif (! $args) {
-        $self->write("OK\n");
-        exit 0;
-    } else {
-        $self->err_line('unknown_args');
-    }
-}
-
-sub TXTCMD_version {
-    my Gearman::Server::Client $self = shift;
-    $self->write("$Gearmand::VERSION\n");
-}
 
 sub CMD_echo_req {
     my Gearman::Server::Client $self = shift;
@@ -514,6 +413,170 @@ sub process_cmd {
 
 sub event_err { my $self = shift; $self->close; }
 sub event_hup { my $self = shift; $self->close; }
+
+############################################################################
+
+=head1 Line based commands
+
+These commands are used for administrative or statistic tasks to be done on the gearman server. They can be entered using a line based client (telnet, etc.) by connecting to the listening port (7003) and are also intended to be machine parsable.
+
+=head2 "workers"
+
+Emits list of registered workers, their fds, IPs, client ids, and list of registered abilities (function names they can do).  Of format:
+
+  fd ip.x.y.z client_id : func_a func_b func_c
+  fd ip.x.y.z client_id : func_a func_b func_c
+  fd ip.x.y.z client_id : func_a func_b func_c
+  .
+
+It ends with a line with just a period.
+
+=cut
+
+sub TXTCMD_workers {
+    my Gearman::Server::Client $self = shift;
+
+    foreach my $cl (sort { $a->{fd} <=> $b->{fd} } $self->{server}->clients) {
+        my $fd = $cl->{fd};
+        $self->write("$fd " . $cl->peer_ip_string . " $cl->{client_id} : @{$cl->{can_do_list}}\n");
+
+    }
+    $self->write(".\n");
+}
+
+=head2 "status"
+
+The output format of this function is tab separated columns as follows, followed by a line consisting of a fullstop and a newline (".\n") to indicate the end of output.
+
+=over
+
+=item Function name
+
+A string denoting the name of the function of the job
+
+=item Number in queue
+
+A positive integer indicating the total number of jobs for this function in the queue. This includes currently running ones as well (next column)
+
+=item Number of jobs running
+
+A positive integer showing how many jobs of this function are currently running
+
+=item Number of capable workers
+
+A positive integer denoting the maximum possible count of workers that could be doing this job. Though they may not all be working on it due to other tasks holding them busy.
+
+=back
+
+=cut
+
+sub TXTCMD_status {
+    my Gearman::Server::Client $self = shift;
+
+    my %can;
+
+    foreach my $client ($self->{server}->clients) {
+        foreach my $func (@{$client->{can_do_list}}) {
+            $can{$func}++;
+        }
+    }
+
+    my %queued_funcs;
+    my %running_funcs;
+
+    foreach my $job ($self->{server}->jobs) {
+        my $func = $job->func;
+        $queued_funcs{$func}++;
+        if ($job->worker) {
+            $running_funcs{$func}++;
+        }
+    }
+
+    while (my ($func, $queued) = each %queued_funcs) {
+        my $running = $running_funcs{$func} || 0;
+        my $can = $can{$func} || 0;
+        $self->write( "$func\t$queued\t$running\t$can\n" );
+    }
+
+    $self->write( ".\n" );
+}
+
+sub TXTCMD_gladiator {
+    my Gearman::Server::Client $self = shift;
+    my $args = shift || "";
+    my $has_gladiator = eval "use Devel::Gladiator; use Devel::Peek; 1;";
+    if ($has_gladiator) {
+        my $all = Devel::Gladiator::walk_arena();
+        my %ct;
+        foreach my $it (@$all) {
+            $ct{ref $it}++;
+            if (ref $it eq "CODE") {
+                my $name = Devel::Peek::CvGV($it);
+                $ct{$name}++ if $name =~ /ANON/;
+            }
+        }
+        $all = undef;  # required to free memory
+        foreach my $n (sort { $ct{$a} <=> $ct{$b} } keys %ct) {
+            next unless $ct{$n} > 1 || $args eq "all";
+            $self->write(sprintf("%7d $n\n", $ct{$n}));
+        }
+    }
+    $self->write(".\n");
+}
+
+=head2 "maxqueue" function [max_queue_size]
+
+For a given function of job, the maximum queue size is adjusted to be max_queue_size jobs long. A negative value indicates unlimited queue size.
+
+If the max_queue_size value is not supplied then it is unset (and the default maximum queue size will apply to this function).
+
+This function will return OK upon success, and will return ERR incomplete_args upon an invalid number of arguments.
+
+=cut
+
+sub TXTCMD_maxqueue {
+    my Gearman::Server::Client $self = shift;
+    my $args = shift;
+    my ($func, $max) = split /\s+/, $args;
+
+    unless (length $func) {
+        return $self->err_line('incomplete_args');
+    }
+
+    $self->{server}->set_max_queue($func, $max);
+    $self->write("OK\n");
+}
+
+=head2 "shutdown" ["graceful"]
+
+Close the server.  Or "shutdown graceful" to close the listening socket, then close the server when traffic has died away.
+
+=cut
+
+sub TXTCMD_shutdown {
+    my Gearman::Server::Client $self = shift;
+    my $args = shift;
+    if ($args eq "graceful") {
+        $self->write("OK\n");
+        Gearmand::shutdown_graceful();
+    } elsif (! $args) {
+        $self->write("OK\n");
+        exit 0;
+    } else {
+        $self->err_line('unknown_args');
+    }
+}
+
+=head2 "version"
+
+Returns server version.
+
+=cut
+
+sub TXTCMD_version {
+    my Gearman::Server::Client $self = shift;
+    $self->write("$Gearman::Server::VERSION\n");
+}
 
 sub err_line {
     my Gearman::Server::Client $self = shift;
