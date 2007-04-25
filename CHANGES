@@ -1,3 +1,8 @@
+        * split up the monolithic gearmand script (which had classes, but
+          all internally), into separate files per class, and also make
+          a new Gearman::Server class, so Gearman servers can be embedded
+          into other processes.  (running Gearman router inside Perlbal,
+          MogileFS, DJabberd, etc... then having child processes be workers)
 
 1.05
 
