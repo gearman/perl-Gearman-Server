@@ -1,3 +1,7 @@
+        * Add Gearman::Server->to_inprocess_server that returns a socket connecting to
+          the server object, we can then use this socket with a Gearman::Client::Async
+          object to run clients and servers in the same thread.
+
         * Add ability for workers to be launched as sub processes of the
           gearmand, using a duped socketpair for communication.
 

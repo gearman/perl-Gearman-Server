@@ -94,6 +94,29 @@ sub clients {
     return values %{ $self->{client_map} };
 }
 
+# Returns a socket that is connected to the server, we can then use this
+# socket with a Gearman::Client::Async object to run clients and servers in the
+# same thread.
+sub to_inprocess_server {
+    my $self = shift;
+
+    my ($psock, $csock);
+    socketpair($csock, $psock, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
+        or  die "socketpair: $!";
+
+    $csock->autoflush(1);
+    $psock->autoflush(1);
+
+    my $client = Gearman::Server::Client->new($csock, $self);
+
+    my ($package, $file, $line) = caller;
+    $client->{peer_ip}  = "[$package|$file|$line]";
+    $client->watch_read(1);
+    $self->{client_map}{$client->{fd}} = $client;
+
+    return $psock;
+}
+
 sub start_worker {
     my ($self, $prog) = @_;
 
