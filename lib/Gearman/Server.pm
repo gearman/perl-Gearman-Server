@@ -17,7 +17,7 @@ use fields (
             'handle_base',   # atomic counter
             );
 
-our $VERSION = "1.06";
+our $VERSION = "1.07";
 
 sub new {
     my ($class, %opts) = @_;
@@ -64,7 +64,7 @@ sub setup_listening_sock {
 
     # make sure provided listening socket is non-blocking
     IO::Handle::blocking($ssock, 0);
-    Danga::Socket->OtherFds(fileno($ssock) => sub {
+    Danga::Socket->AddOtherFds(fileno($ssock) => sub {
         my $csock = $ssock->accept
             or return;
 
