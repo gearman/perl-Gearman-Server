@@ -17,7 +17,7 @@ use fields (
             'handle_base',   # atomic counter
             );
 
-our $VERSION = "1.07";
+our $VERSION = "1.08";
 
 sub new {
     my ($class, %opts) = @_;
@@ -140,6 +140,10 @@ sub start_worker {
         close(STDOUT);
         open(STDIN, '<&', $psock) or die "Unable to dup socketpair to STDIN: $!";
         open(STDOUT, '>&', $psock) or die "Unable to dup socketpair to STDOUT: $!";
+        if (UNIVERSAL::isa($prog, "CODE")) {
+            $prog->();
+            exit 0; # shouldn't get here.  subref should exec.
+        }
         exec $prog;
         die "Exec failed: $!";
     }
@@ -149,7 +153,7 @@ sub start_worker {
 
     my $client = Gearman::Server::Client->new($sock, $self);
 
-    $client->{peer_ip}  = "[$prog]";
+    $client->{peer_ip}  = "[gearman_child]";
     $client->watch_read(1);
     $self->{client_map}{$client->{fd}} = $client;
     return $client;

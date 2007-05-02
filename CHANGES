@@ -1,3 +1,7 @@
+1.08 2007-05-01
+
+        * let start_worker take a coderef for the exec, not just an $exe name
+
 1.07 2007-05-01
 
         * fix up bug in Gearman::Server:  we set OtherFds, instead of adding with
