@@ -473,11 +473,14 @@ A positive integer denoting the maximum possible count of workers that could be 
 sub TXTCMD_status {
     my Gearman::Server::Client $self = shift;
 
-    my %can;
+    my %funcs; # func -> 1  (set of all funcs to display)
 
+    # keep track of how many workers can do which functions
+    my %can;
     foreach my $client ($self->{server}->clients) {
         foreach my $func (@{$client->{can_do_list}}) {
             $can{$func}++;
+            $funcs{$func} = 1;
         }
     }
 
@@ -492,9 +495,14 @@ sub TXTCMD_status {
         }
     }
 
-    while (my ($func, $queued) = each %queued_funcs) {
+    # also include queued functions (even if there aren't workers)
+    # in our list of funcs to show.
+    $funcs{$_} = 1 foreach keys %queued_funcs;
+
+    foreach my $func (sort keys %funcs) {
+        my $queued  = $queued_funcs{$func}  || 0;
         my $running = $running_funcs{$func} || 0;
-        my $can = $can{$func} || 0;
+        my $can     = $can{$func}           || 0;
         $self->write( "$func\t$queued\t$running\t$can\n" );
     }
 

@@ -1,3 +1,6 @@
+        * make the text command "status" show functions which have
+          registered workers, even if nothing is pending for that func.
+
 1.08 2007-05-01
 
         * let start_worker take a coderef for the exec, not just an $exe name
