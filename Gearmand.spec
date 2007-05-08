@@ -9,15 +9,16 @@ group:     Applications/CPAN
 buildroot: %{_tmppath}/%{name}-%{version}-%(id -u -n)
 buildarch: noarch
 source:    Gearman-Server-%{version}.tar.gz
-buildrequires: perl-Danga-Socket >= 1.52
+buildrequires: perl-Danga-Socket >= 1.52, perl-Gearman-Client
 requires:  perl-Gearman-Server = %{version}-%{release}, perl-Danga-Socket >= 1.52
+autoreq: no
 
 %description
 Gearman job distribution system
 
 %prep
 rm -rf "%{buildroot}"
-%setup -n Gearmand-%{version}
+%setup -n Gearman-Server-%{version}
 
 %build
 %{__perl} Makefile.PL PREFIX=%{buildroot}%{_prefix}
