@@ -17,7 +17,7 @@ use fields (
             'handle_base',   # atomic counter
             );
 
-our $VERSION = "1.08";
+our $VERSION = "1.09";
 
 sub new {
     my ($class, %opts) = @_;
@@ -156,7 +156,7 @@ sub start_worker {
     $client->{peer_ip}  = "[gearman_child]";
     $client->watch_read(1);
     $self->{client_map}{$client->{fd}} = $client;
-    return $client;
+    return wantarray ? ($pid, $client) : $pid;
 }
 
 sub enqueue_job {

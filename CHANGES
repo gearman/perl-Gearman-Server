@@ -1,3 +1,8 @@
+1.09 2007-05-09
+
+        * make start_worker (for making worker child processes), return
+          the pid in scalar context, or ($pid, $conn) in list context
+
         * make the text command "status" show functions which have
           registered workers, even if nothing is pending for that func.
 
