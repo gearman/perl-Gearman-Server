@@ -5,6 +5,7 @@ use Gearman::Server::Job;
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET SOCK_STREAM AF_UNIX SOCK_STREAM PF_UNSPEC);
 use Carp qw(croak);
 use Sys::Hostname ();
+use IO::Handle ();
 
 use fields (
             'client_map',    # fd -> Client
@@ -107,6 +108,9 @@ sub to_inprocess_server {
     $csock->autoflush(1);
     $psock->autoflush(1);
 
+    IO::Handle::blocking($csock, 0);
+    IO::Handle::blocking($psock, 0);
+
     my $client = Gearman::Server::Client->new($csock, $self);
 
     my ($package, $file, $line) = caller;
@@ -149,6 +153,8 @@ sub start_worker {
     }
 
     close($psock);
+
+    IO::Handle::blocking($csock, 0);
     my $sock = $csock;
 
     my $client = Gearman::Server::Client->new($sock, $self);
