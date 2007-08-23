@@ -1,4 +1,28 @@
 package Gearman::Server;
+
+=head1 NAME
+
+Gearman::Server - function call "router" and load balancer
+
+=head1 DESCRIPTION
+
+You run a Gearman server (or more likely, many of them for both
+high-availability and load balancing), then have workers (using
+L<Gearman::Worker> from the Gearman module, or libraries for other
+languages) register their ability to do certain functions to all of
+them, and then clients (using L<Gearman::Client>,
+L<Gearman::Client::Async>, etc) request work to be done from one of
+the Gearman servers.
+
+The servers connect them, routing function call requests to the
+appropriate workers, multiplexing responses to duplicate requests as
+requested, etc.
+
+More than likely, you want to use the provided L<gearmand> wrapper
+script, and not use Gearman::Server directly.
+
+=cut
+
 use strict;
 use Gearman::Server::Client;
 use Gearman::Server::Job;
@@ -19,6 +43,26 @@ use fields (
             );
 
 our $VERSION = "1.09";
+
+=head1 METHODS
+
+=head2 new
+
+  $server_object = Gearman::Server->new( %options )
+
+Creates and returns a new Gearman::Server object, which attaches itself to the Danga::Socket event loop. The server will begin operating when the Danga::Socket runloop is started. This means you need to start up the runloop before anything will happen.
+
+Options:
+
+=over
+
+=item port
+
+Specify a port which you would like the Gearman::Server to listen on for TCP connections (not necessary, but useful)
+
+=back
+
+=cut
 
 sub new {
     my ($class, %opts) = @_;
@@ -45,6 +89,14 @@ sub debug {
     my ($self, $msg) = @_;
     #warn "$msg\n";
 }
+
+=head2 create_listening_sock
+
+  $server_object->create_listening_sock( $portnum )
+
+Add a TCP port listener for incoming Gearman worker and client connections.
+
+=cut
 
 sub create_listening_sock {
     my ($self, $portnum) = @_;
@@ -120,6 +172,16 @@ sub to_inprocess_server {
 
     return $psock;
 }
+
+=head2 start_worker
+
+  $pid = $server_object->start_worker( $prog )
+
+  ($pid, $client) = $server_object->start_worker( $prog )
+
+Fork and start a worker process named by C<$prog> and returns the pid (or pid and client object).
+
+=cut
 
 sub start_worker {
     my ($self, $prog) = @_;
@@ -296,27 +358,6 @@ sub grab_job {
 
 1;
 __END__
-
-=head1 NAME
-
-Gearman::Server - function call "router" and load balancer
-
-=head1 DESCRIPTION
-
-You run a Gearman server (or more likely, many of them for both
-high-availability and load balancing), then have workers (using
-L<Gearman::Worker> from the Gearman module, or libraries for other
-languages) register their ability to do certain functions to all of
-them, and then clients (using L<Gearman::Client>,
-L<Gearman::Client::Async>, etc) request work to be done from one of
-the Gearman servers.
-
-The servers connect them, routing function call requests to the
-appropriate workers, multiplexing responses to duplicate requests as
-requested, etc.
-
-More than likely, you want to use the provided L<gearmand> wrapper
-script, and not use Gearman::Server directly.
 
 =head1 SEE ALSO
 
