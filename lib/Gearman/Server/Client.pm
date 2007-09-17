@@ -27,6 +27,8 @@ use fields (
             'can_do',  # { $job_name => $timeout } $timeout can be undef indicating no timeout
             'can_do_list',
             'can_do_iter',
+            'fast_read',
+            'fast_buffer',
             'read_buf',
             'sleeping',   # 0/1:  they've said they're sleeping and we haven't woken them up
             'timer', # Timer for job cancellation
@@ -43,6 +45,8 @@ sub new {
     $self = fields::new($self) unless ref $self;
     $self->SUPER::new($sock);
 
+    $self->{fast_read}   = undef; # Number of bytes to read as fast as we can (don't try to process them)
+    $self->{fast_buffer} = []; # Array of buffers used during fast read operation
     $self->{read_buf}    = '';
     $self->{sleeping}    = 0;
     $self->{can_do}      = {};
@@ -77,7 +81,23 @@ sub event_read {
 
     my $bref = $self->read(1024);
     return $self->close unless defined $bref;
-    $self->{read_buf} .= $$bref;
+
+    if ($self->{fast_read}) {
+        push @{$self->{fast_buffer}}, $$bref;
+        $self->{fast_read} -= length($$bref);
+
+        # If fast_read is still positive, then we need to read more data
+        return if ($self->{fast_read} > 0);
+
+        # Append the whole giant read buffer to our main read buffer
+        $self->{read_buf} .= join('', @{$self->{fast_buffer}});
+
+        # Reset the fast read state for next time.
+        $self->{fast_buffer} = [];
+        $self->{fast_read} = undef;
+    } else {
+        $self->{read_buf} .= $$bref;
+    }
 
     my $found_cmd;
     do {
@@ -87,8 +107,9 @@ sub event_read {
         if ($self->{read_buf} =~ /^\0REQ(.{8,8})/s) {
             my ($cmd, $len) = unpack("NN", $1);
             if ($blen < $len + 12) {
-                # not here yet.
-                $found_cmd = 0;
+                # Start a fast read loop to get all the data we need, less
+                # what we already have in the buffer.
+                $self->{fast_read} = $len + 12 - $blen;
                 return;
             }
 

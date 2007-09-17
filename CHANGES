@@ -1,3 +1,6 @@
+        * add fast read concept to server reading from client codepath. This drastically
+          improves performance of jobs over 1k in size.
+
         * fix in-process client and start_worker method calls to use non-blocking
           sockets like they should.
 
