@@ -1,6 +1,6 @@
 name:      Gearmand
 summary:   Gearmand - Gearman job distribution server
-version:   1.08
+version:   1.09
 release:   1
 vendor:    Brad Fitzpatrick <brad@danga.com>
 packager:  Jonathan Steinert <hachi@cpan.org>
