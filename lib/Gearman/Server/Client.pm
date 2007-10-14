@@ -79,7 +79,8 @@ sub close {
 sub event_read {
     my Gearman::Server::Client $self = shift;
 
-    my $bref = $self->read(1024);
+    my $read_size = $self->{fast_read} || 1024;
+    my $bref = $self->read($read_size);
     return $self->close unless defined $bref;
 
     if ($self->{fast_read}) {
