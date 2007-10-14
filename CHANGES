@@ -1,3 +1,9 @@
+        * Change listening socket to be a real Danga::Socket subclass, this allows
+          pausing for a period of time when we run into accept errors. This will
+          fix the problem of gearmand spinning 100% cpu in those cases.
+
+        * Make gearmand a little more vocal about socket accept errors.
+
         * add fast read concept to server reading from client codepath. This drastically
           improves performance of jobs over 1k in size.
 

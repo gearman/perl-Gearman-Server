@@ -25,8 +25,9 @@ script, and not use Gearman::Server directly.
 
 use strict;
 use Gearman::Server::Client;
+use Gearman::Server::Listener;
 use Gearman::Server::Job;
-use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET SOCK_STREAM AF_UNIX SOCK_STREAM PF_UNSPEC);
+use Socket qw(IPPROTO_TCP SOL_SOCKET SOCK_STREAM AF_UNIX SOCK_STREAM PF_UNSPEC);
 use Carp qw(croak);
 use Sys::Hostname ();
 use IO::Handle ();
@@ -40,6 +41,7 @@ use fields (
             'job_of_uniq',   # func -> uniq -> Job
             'handle_ct',     # atomic counter
             'handle_base',   # atomic counter
+            'listeners',     # arrayref of listener objects
             );
 
 our $VERSION = "1.09";
@@ -74,6 +76,7 @@ sub new {
     $self->{job_of_handle} = {};
     $self->{max_queue}     = {};
     $self->{job_of_uniq}   = {};
+    $self->{listeners}     = [];
 
     $self->{handle_ct} = 0;
     $self->{handle_base} = "H:" . Sys::Hostname::hostname() . ":";
@@ -108,26 +111,10 @@ sub create_listening_sock {
                                       Listen    => 10 )
         or die "Error creating socket: $@\n";
 
-    $self->setup_listening_sock($ssock);
+    my $listeners = $self->{listeners};
+    push @$listeners, Gearman::Server::Listener->new($ssock, $self);
+
     return $ssock;
-}
-
-sub setup_listening_sock {
-    my ($self, $ssock) = @_;
-
-    # make sure provided listening socket is non-blocking
-    IO::Handle::blocking($ssock, 0);
-    Danga::Socket->AddOtherFds(fileno($ssock) => sub {
-        my $csock = $ssock->accept
-            or return;
-
-        $self->debug(sprintf("Listen child making a Client for %d.", fileno($csock)));
-
-        IO::Handle::blocking($csock, 0);
-        setsockopt($csock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
-
-        $self->new_client($csock);
-    });
 }
 
 sub new_client {
