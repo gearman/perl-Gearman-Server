@@ -36,6 +36,7 @@ use fields (
             'client_id',  # opaque string, no whitespace.  workers give this so checker scripts
                           # can tell apart the same worker connected to multiple jobservers.
             'server',     # pointer up to client's server
+            'options',
             );
 
 # Class Method:
@@ -55,8 +56,16 @@ sub new {
     $self->{can_do_iter} = 0;  # numeric iterator for where we start looking for jobs
     $self->{client_id}   = "-";
     $self->{server}      = $server;
+    $self->{options}     = {};
 
     return $self;
+}
+
+sub option {
+    my Gearman::Server::Client $self = shift;
+    my $option = shift;
+
+    return $self->{options}->{$option};
 }
 
 sub close {
@@ -237,6 +246,22 @@ sub CMD_work_fail {
     return 1;
 }
 
+sub CMD_work_exception {
+    my Gearman::Server::Client $self = shift;
+    my $ar = shift;
+
+    $$ar =~ s/^(.+?)\0//;
+    my $handle = $1;
+    my $job = $self->{doing}{$handle};
+
+    return $self->error_packet("not_worker") unless $job && $job->worker == $self;
+
+    my $msg = Gearman::Util::pack_res_command("work_exception", join("\0", $handle, $$ar));
+    $job->relay_to_option_listeners($msg, "exceptions");
+
+    return 1;
+}
+
 sub CMD_pre_sleep {
     my Gearman::Server::Client $self = shift;
     $self->{'sleeping'} = 1;
@@ -315,6 +340,22 @@ sub CMD_can_do_timeout {
     }
 
     $self->_setup_can_do_list;
+}
+
+sub CMD_option_req {
+    my Gearman::Server::Client $self = shift;
+    my $ar = shift;
+
+    my $success = sub {
+        return $self->res_packet("option_res", $$ar);
+    };
+
+    if ($$ar eq 'exceptions') {
+        $self->{options}->{exceptions} = 1;
+        return $success->();
+    }
+
+    return $self->error_packet("unknown_option");
 }
 
 sub CMD_set_client_id {
@@ -429,7 +470,7 @@ sub process_cmd {
         $self->$cmd_name(\$blob);
     };
     return $ret unless $@;
-    print "Error: $@\n";
+    warn "Error: $@\n";
     return $self->error_packet("server_error", $@);
 }
 

@@ -1,3 +1,9 @@
+        * Add exceptions passing support to gearman server classes, using new options
+          support.
+
+        * Add options support to server clients, so they can subscribe to newer protocol
+          features.
+
         * Change listening socket to be a real Danga::Socket subclass, this allows
           pausing for a period of time when we run into accept errors. This will
           fix the problem of gearmand spinning 100% cpu in those cases.
