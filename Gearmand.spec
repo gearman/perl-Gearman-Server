@@ -1,7 +1,7 @@
 name:      Gearmand
 summary:   Gearmand - Gearman job distribution server
 version:   1.09
-release:   1
+release:   2
 vendor:    Brad Fitzpatrick <brad@danga.com>
 packager:  Jonathan Steinert <hachi@cpan.org>
 license:   Artistic
@@ -10,7 +10,7 @@ buildroot: %{_tmppath}/%{name}-%{version}-%(id -u -n)
 buildarch: noarch
 source:    Gearman-Server-%{version}.tar.gz
 buildrequires: perl-Danga-Socket >= 1.52, perl-Gearman-Client
-requires:  perl-Gearman-Server = %{version}-%{release}, perl-Danga-Socket >= 1.52
+requires:  perl-Gearman-Server = %{version}-%{release}
 autoreq: no
 
 %description
@@ -54,6 +54,8 @@ find %{buildroot}%{_prefix}             \
 %package -n perl-Gearman-Server
 summary:   perl-Gearman-Server - Gearman server libraries.
 group:     Applications/CPAN
+requires:  perl-Danga-Socket >= 1.52, perl-Gearman-Client
+autoreq: no
 %description -n perl-Gearman-Server
 Gearman server libraries.
 
