@@ -1,0 +1,16 @@
+Source: gearman-server
+Section: perl
+Priority: optional
+Maintainer: Jonathan Steinert <deb@hachi.kuiki.net>
+Build-Depends-Indep: lib-gearman-server-perl
+Standards-Version: 3.6.1.0
+
+Package: gearmand
+Architecture: all
+Depends: ${perl:Depends}, debhelper (>= 4.1.40), libgearman-server-perl, debconf (>= 1.2.0)
+Description: Gearman server
+
+Package: libgearman-server-perl
+Architecture: all
+Depends: ${perl:Depends}, debhelper (>= 4.1.40), libdanga-socket-perl, debconf (>= 1.2.0)
+Description: Gearman server libraries

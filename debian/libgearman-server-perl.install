@@ -1,0 +1,4 @@
+usr/share/perl5/Gearman/Server.pm        /usr/share/perl5/Gearman
+usr/share/perl5/Gearman/Server           /usr/share/perl5/Gearman
+usr/share/man/man3/Gearman::Server.*     /usr/share/man/man3
+usr/share/man/man3/Gearman::Server::*    /usr/share/man/man3

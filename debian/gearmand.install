@@ -1,0 +1,2 @@
+usr/bin/gearmand               /usr/sbin
+usr/share/man/man1/gearmand.*  /usr/share/man/man1
