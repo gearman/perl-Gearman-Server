@@ -73,7 +73,7 @@ sub close {
 
     my $doing = $self->{doing};
 
-    while (my ($handle, $job) = each %$doing}) {
+    while (my ($handle, $job) = each %$doing) {
         my $msg = Gearman::Util::pack_res_command("work_fail", $handle);
         $job->relay_to_listeners($msg);
         $job->note_finished(0);
