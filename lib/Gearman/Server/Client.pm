@@ -71,11 +71,17 @@ sub option {
 sub close {
     my Gearman::Server::Client $self = shift;
 
-    while (my ($handle, $job) = each %{$self->{doing}}) {
+    my $doing = $self->{doing};
+
+    while (my ($handle, $job) = each %$doing}) {
         my $msg = Gearman::Util::pack_res_command("work_fail", $handle);
         $job->relay_to_listeners($msg);
         $job->note_finished(0);
     }
+
+    # Clear the doing list, since it may contain a set of jobs which contain
+    # references back to us.
+    %$doing = ();
 
     $self->{server}->note_disconnected_client($self);
 
