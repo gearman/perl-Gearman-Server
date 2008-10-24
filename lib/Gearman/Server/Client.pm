@@ -83,6 +83,15 @@ sub close {
     # references back to us.
     %$doing = ();
 
+    # Remove self from sleepers, otherwise it will be leaked if another worker
+    # for the job never connects.
+    my $sleepers = $self->{server}{sleepers};
+    for my $job (@{ $self->{can_do_list} }) {
+        my $sleeping = $sleepers->{$job};
+        delete $sleeping->{$self};
+        delete $sleepers->{$job} unless %$sleeping;
+    }
+
     $self->{server}->note_disconnected_client($self);
 
     $self->CMD_reset_abilities;
