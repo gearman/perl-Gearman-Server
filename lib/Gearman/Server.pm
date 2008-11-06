@@ -333,7 +333,7 @@ sub grab_job {
     while (1) {
         $job = shift @{$self->{job_queue}{$func}};
         return $empty->() unless $job;
-        return $job unless $job->{require_listener};
+        return $job unless $job->require_listener;
 
         foreach my Gearman::Server::Client $c (@{$job->{listeners}}) {
             return $job if $c && ! $c->{closed};
