@@ -1,5 +1,6 @@
 package Gearman::Server::Job;
 use strict;
+use Scalar::Util;
 use Sys::Hostname;
 
 use fields (
