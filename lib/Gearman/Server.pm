@@ -108,7 +108,7 @@ sub create_listening_sock {
                                       Proto     => IPPROTO_TCP,
                                       Blocking  => 0,
                                       Reuse     => 1,
-                                      Listen    => 10 )
+                                      Listen    => 1024 )
         or die "Error creating socket: $@\n";
 
     my $listeners = $self->{listeners};
