@@ -60,5 +60,6 @@ autoreq: no
 Gearman server libraries.
 
 %files -n perl-Gearman-Server
+%defattr(-,root,root)
 %{_prefix}/lib/*
 %{_prefix}/share/man/man3
