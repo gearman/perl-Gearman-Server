@@ -1,5 +1,14 @@
+        * Add command-line option to adjust a delay before more workers are started up.
+          This acts as an anti-starvation mechanism in case of lower wake up counts.
+            -Default is .1 seconds, formerly this option was not needed because all workers
+             were woken up at the time of job submission.
+
+        * Add command-line option to adjust number of workers to wake up per job injected.
+            -Default is 3, formerly was -1 (wake up all as fast as possible)
+
         * Add command-line option to change the number of sockets accepted at once per
-          listener socket. Default is now 10, formerly used to be 1.
+          listener socket.
+            -Default is now 10, formerly used to be 1.
 
         * Add exceptions passing support to gearman server classes, using new options
           support.

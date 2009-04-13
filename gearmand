@@ -40,6 +40,28 @@ Enable debugging (currently the only debug output is when a client or worker con
 Number of new connections to accept each time we see a listening socket ready. This doesn't usually
 need to be tuned by anyone, however in dire circumstances you may need to do it quickly.
 
+=item --wakeup=3
+
+Number of workers to wake up per job inserted into the queue.
+
+Zero (0) is a perfectly acceptable answer, and can be used if you don't care much about job latency.
+This would bank on the base idea of a worker checking in with the server every so often.
+
+Negative One (-1) indicates that all sleeping workers should be woken up.
+
+All other negative numbers will cause the server to throw exception and not start.
+
+=item --wakeup-delay=
+
+Time interval before waking up more workers (the value specified by --wakeup) when jobs are still in
+the queue.
+
+Zero (0) means go as fast as possible, but not all at the same time. Similar to -1 on --wakeup, but
+is more cooperative in gearmand's multitasking model.
+
+Negative One (-1) means that this event won't happe, so only the initial workers will be woken up to
+handle jobs in the queue.
+
 =back
 
 =head1 COPYRIGHT
@@ -97,6 +119,8 @@ my (
     $notify_pid,
     $opt_pidfile,
     $accept,
+    $wakeup,
+    $wakeup_delay,
    );
 my $conf_port = 7003;
 
@@ -106,6 +130,8 @@ Getopt::Long::GetOptions(
                          'debug=i'        => \$DEBUG,
                          'pidfile=s'      => \$opt_pidfile,
                          'accept=i'       => \$accept,
+                         'wakeup=i'       => \$wakeup,
+                         'wakeup-delay=f' => \$wakeup_delay,
                          'notifypid|n=i'  => \$notify_pid,  # for test suite only.
                          );
 
@@ -117,7 +143,10 @@ our $graceful_shutdown = 0;
 
 $SIG{'PIPE'} = "IGNORE";  # handled manually
 
-my $server = Gearman::Server->new;
+my $server = Gearman::Server->new(
+                                  wakeup          => $wakeup,
+                                  wakeup_delay    => $wakeup_delay,
+             );
 my $ssock  = $server->create_listening_sock($conf_port, accept_per_loop => $accept);
 
 if ($opt_pidfile) {

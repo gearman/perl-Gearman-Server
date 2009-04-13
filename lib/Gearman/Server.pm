@@ -43,6 +43,9 @@ use fields (
             'handle_ct',     # atomic counter
             'handle_base',   # atomic counter
             'listeners',     # arrayref of listener objects
+            'wakeup',        # number of workers to wake
+            'wakeup_delay',  # seconds to wait before waking more workers
+            'wakeup_timers', # func -> timer, timer to be canceled or adjusted when job grab/inject is called
             );
 
 our $VERSION = "1.09";
@@ -79,11 +82,31 @@ sub new {
     $self->{max_queue}     = {};
     $self->{job_of_uniq}   = {};
     $self->{listeners}     = [];
+    $self->{wakeup}        = 3;
+    $self->{wakeup_delay}  = .1;
+    $self->{wakeup_timers} = {};
 
     $self->{handle_ct} = 0;
     $self->{handle_base} = "H:" . Sys::Hostname::hostname() . ":";
 
     my $port = delete $opts{port};
+
+    my $wakeup = delete $opts{wakeup};
+
+    if (defined $wakeup) {
+        die "Invalid value passed in wakeup option"
+            if $wakeup < 0 && $wakeup != -1;
+        $self->{wakeup} = $wakeup;
+    }
+
+    my $wakeup_delay = delete $opts{wakeup_delay};
+
+    if (defined $wakeup_delay) {
+        die "Invalid value passed in wakeup_delay option"
+            if $wakeup_delay < 0 && $wakeup_delay != -1;
+        $self->{wakeup_delay} = $wakeup_delay;
+    }
+
     croak("Unknown options") if %opts;
     $self->create_listening_sock($port);
 
@@ -247,20 +270,46 @@ sub enqueue_job {
 
 sub wake_up_sleepers {
     my ($self, $func) = @_;
+
+    if (my $existing_timer = delete($self->{wakeup_timers}->{$func})) {
+        $existing_timer->cancel();
+    }
+
+    return unless $self->_wake_up_some($func);
+
+    my $delay = $self->{wakeup_delay};
+
+    # -1 means don't setup a timer. 0 actually means go as fast as we can, cooperatively.
+    return if $delay == -1;
+
+    # If we're only going to wakeup 0 workers anyways, don't set up a timer.
+    return if $self->{wakeup} == 0;
+
+    my $timer = Danga::Socket->AddTimer($delay, sub { $self->wake_up_sleepers($func) });
+    $self->{wakeup_timers}->{$func} = $timer;
+}
+
+# Returns true when there are still more workers to wake up
+# False if there are no sleepers
+sub _wake_up_some {
+    my ($self, $func) = @_;
     my $sleepmap = $self->{sleepers}{$func} or return;
     my $sleeporder = $self->{sleepers_list}{$func} or return;
 
     # TODO SYNC UP STATE HERE IN CASE TWO LISTS END UP OUT OF SYNC
 
-    my $max = 3;
+    my $max = $self->{wakeup};
 
     while (@$sleeporder) {
         my Gearman::Server::Client $c = shift @$sleeporder;
-        delete $sleepmap->{"$c"};
         next if $c->{closed} || ! $c->{sleeping};
+        if ($max-- <= 0) {
+            unshift @$sleeporder, $c;
+            return 1;
+        }
+        delete $sleepmap->{"$c"};
         $c->res_packet("noop");
         $c->{sleeping} = 0;
-        return if $max-- <= 0;
     }
 
     delete $self->{sleepers}{$func};
