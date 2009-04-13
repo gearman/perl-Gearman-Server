@@ -37,6 +37,7 @@ use fields (
                           # can tell apart the same worker connected to multiple jobservers.
             'server',     # pointer up to client's server
             'options',
+            'jobs_done_since_sleep',
             );
 
 # Class Method:
@@ -57,6 +58,7 @@ sub new {
     $self->{client_id}   = "-";
     $self->{server}      = $server;
     $self->{options}     = {};
+    $self->{jobs_done_since_sleep} = 0;
 
     return $self;
 }

@@ -35,6 +35,7 @@ use IO::Handle ();
 use fields (
             'client_map',    # fd -> Client
             'sleepers',      # func -> { "Client=HASH(0xdeadbeef)" => Client }
+            'sleepers_list', # func -> [ Client, ... ], ...
             'job_queue',     # job_name -> [Job, Job*]  (key only exists if non-empty)
             'job_of_handle', # handle -> Job
             'max_queue',     # func -> configured max jobqueue size
@@ -72,6 +73,7 @@ sub new {
 
     $self->{client_map}    = {};
     $self->{sleepers}      = {};
+    $self->{sleepers_list} = {};
     $self->{job_queue}     = {};
     $self->{job_of_handle} = {};
     $self->{max_queue}     = {};
@@ -246,20 +248,31 @@ sub enqueue_job {
 sub wake_up_sleepers {
     my ($self, $func) = @_;
     my $sleepmap = $self->{sleepers}{$func} or return;
+    my $sleeporder = $self->{sleepers_list}{$func} or return;
 
-    foreach my $addr (keys %$sleepmap) {
-        my Gearman::Server::Client $c = $sleepmap->{$addr};
+    # TODO SYNC UP STATE HERE IN CASE TWO LISTS END UP OUT OF SYNC
+
+    my $max = 3;
+
+    while (@$sleeporder) {
+        my Gearman::Server::Client $c = shift @$sleeporder;
+        delete $sleepmap->{"$c"};
         next if $c->{closed} || ! $c->{sleeping};
         $c->res_packet("noop");
         $c->{sleeping} = 0;
+        return if $max-- <= 0;
     }
 
     delete $self->{sleepers}{$func};
+    delete $self->{sleepers_list}{$func};
     return;
 }
 
 sub on_client_sleep {
-    my ($self, $cl) = @_;
+    my $self = shift;
+    my Gearman::Server::Client $cl = shift;
+
+    warn "$cl is going to sleep\n";
 
     foreach my $cd (@{$cl->{can_do_list}}) {
         # immediately wake the sleeper up if there are things to be done
@@ -270,7 +283,22 @@ sub on_client_sleep {
         }
 
         my $sleepmap = ($self->{sleepers}{$cd} ||= {});
-        $sleepmap->{"$cl"} ||= $cl;
+        my $count = $sleepmap->{"$cl"}++;
+
+        next if $count >= 2;
+
+        my $sleeporder = ($self->{sleepers_list}{$cd} ||= []);
+
+        my $jobs_done = $cl->{jobs_done_since_sleep};
+        $cl->{jobs_done_since_sleep} = 0;
+        if ($jobs_done) {
+            warn "Unshifting onto the $cd list ($jobs_done)\n";
+            unshift @$sleeporder, $cl;
+        } else {
+            warn "Pushing onto the $cd list\n";
+            push @$sleeporder, $cl;
+        }
+
     }
 }
 
@@ -292,6 +320,12 @@ sub job_by_handle {
 sub note_job_finished {
     my Gearman::Server $self = shift;
     my Gearman::Server::Job $job = shift;
+
+    if (my Gearman::Server::Client $worker = $job->worker) {
+        $worker->{jobs_done_since_sleep}++;
+    } else {
+        warn "Noting job finished on no worker\n";
+    }
 
     if (length($job->{uniq})) {
         delete $self->{job_of_uniq}{$job->{func}}{$job->{uniq}};
