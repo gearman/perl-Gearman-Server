@@ -272,8 +272,6 @@ sub on_client_sleep {
     my $self = shift;
     my Gearman::Server::Client $cl = shift;
 
-    warn "$cl is going to sleep\n";
-
     foreach my $cd (@{$cl->{can_do_list}}) {
         # immediately wake the sleeper up if there are things to be done
         if ($self->{job_queue}{$cd}) {
@@ -289,15 +287,17 @@ sub on_client_sleep {
 
         my $sleeporder = ($self->{sleepers_list}{$cd} ||= []);
 
+        # The idea here is to keep workers at the head of the list if they are doing work, hopefully
+        # this will allow extra workers that aren't needed to actually go 'idle' safely.
         my $jobs_done = $cl->{jobs_done_since_sleep};
-        $cl->{jobs_done_since_sleep} = 0;
+
         if ($jobs_done) {
-            warn "Unshifting onto the $cd list ($jobs_done)\n";
             unshift @$sleeporder, $cl;
         } else {
-            warn "Pushing onto the $cd list\n";
             push @$sleeporder, $cl;
         }
+
+        $cl->{jobs_done_since_sleep} = 0;
 
     }
 }
@@ -323,8 +323,6 @@ sub note_job_finished {
 
     if (my Gearman::Server::Client $worker = $job->worker) {
         $worker->{jobs_done_since_sleep}++;
-    } else {
-        warn "Noting job finished on no worker\n";
     }
 
     if (length($job->{uniq})) {
