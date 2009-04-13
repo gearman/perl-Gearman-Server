@@ -1,3 +1,6 @@
+        * Add command-line option to change the number of sockets accepted at once per
+          listener socket. Default is now 10, formerly used to be 1.
+
         * Add exceptions passing support to gearman server classes, using new options
           support.
 

@@ -19,7 +19,7 @@ sub new {
     warn "Extra options passed into new: " . join(', ', keys %opts) . "\n"
         if keys %opts;
 
-    $accept_per_loop = 1 unless defined $accept_per_loop and $accept_per_loop >= 1;
+    $accept_per_loop = 10 unless defined $accept_per_loop and $accept_per_loop >= 1;
 
     $self = fields::new($self) unless ref $self;
 

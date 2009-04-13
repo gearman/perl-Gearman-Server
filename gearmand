@@ -35,6 +35,11 @@ Write a pidfile when starting up
 
 Enable debugging (currently the only debug output is when a client or worker connects).
 
+=item --accept=10
+
+Number of new connections to accept each time we see a listening socket ready. This doesn't usually
+need to be tuned by anyone, however in dire circumstances you may need to do it quickly.
+
 =back
 
 =head1 COPYRIGHT
