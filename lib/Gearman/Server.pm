@@ -102,7 +102,13 @@ Add a TCP port listener for incoming Gearman worker and client connections.
 =cut
 
 sub create_listening_sock {
-    my ($self, $portnum) = @_;
+    my ($self, $portnum, %opts) = @_;
+
+    my $accept_per_loop = delete $opts{accept_per_loop};
+
+    warn "Extra options passed into create_listening_sock: " . join(', ', keys %opts) . "\n"
+        if keys %opts;
+
     my $ssock = IO::Socket::INET->new(LocalPort => $portnum,
                                       Type      => SOCK_STREAM,
                                       Proto     => IPPROTO_TCP,
@@ -112,7 +118,7 @@ sub create_listening_sock {
         or die "Error creating socket: $@\n";
 
     my $listeners = $self->{listeners};
-    push @$listeners, Gearman::Server::Listener->new($ssock, $self);
+    push @$listeners, Gearman::Server::Listener->new($ssock, $self, accept_per_loop => $accept_per_loop);
 
     return $ssock;
 }

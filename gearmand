@@ -91,6 +91,7 @@ my (
     $nokeepalive,
     $notify_pid,
     $opt_pidfile,
+    $accept,
    );
 my $conf_port = 7003;
 
@@ -98,7 +99,8 @@ Getopt::Long::GetOptions(
                          'd|daemonize'    => \$daemonize,
                          'p|port=i'       => \$conf_port,
                          'debug=i'        => \$DEBUG,
-			 'pidfile=s'      => \$opt_pidfile,
+                         'pidfile=s'      => \$opt_pidfile,
+                         'accept=i'       => \$accept,
                          'notifypid|n=i'  => \$notify_pid,  # for test suite only.
                          );
 
@@ -111,7 +113,7 @@ our $graceful_shutdown = 0;
 $SIG{'PIPE'} = "IGNORE";  # handled manually
 
 my $server = Gearman::Server->new;
-my $ssock  = $server->create_listening_sock($conf_port);
+my $ssock  = $server->create_listening_sock($conf_port, accept_per_loop => $accept);
 
 if ($opt_pidfile) {
     open my $fh, '>', $opt_pidfile or die "Could not open $opt_pidfile: $!";
