@@ -1,3 +1,6 @@
+        * Flush buffers to client on EOF (assume half-closed). This makes things like netcat
+          work better as a way to speak text protocol to the gearmand.
+
         * Add command-line option to adjust a delay before more workers are woken up.
           This acts as an anti-starvation mechanism in case of lower wake up counts.
             -Default is .1 seconds, formerly this option was not needed because all workers

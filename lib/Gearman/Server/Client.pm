@@ -107,7 +107,10 @@ sub event_read {
 
     my $read_size = $self->{fast_read} || 1024;
     my $bref = $self->read($read_size);
-    return $self->close unless defined $bref;
+
+    # Delay close till after buffers are written on EOF. If we are unable
+    # to write 'err' or 'hup' will be thrown and we'll close faster.
+    return $self->write(sub { $self->close } ) unless defined $bref;
 
     if ($self->{fast_read}) {
         push @{$self->{fast_buffer}}, $$bref;
