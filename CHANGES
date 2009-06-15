@@ -1,3 +1,6 @@
+        * Add text commands 'jobs' and 'clients' which give information allowing you to trace
+          jobs from clients to workers while they are running.
+
         * Flush buffers to client on EOF (assume half-closed). This makes things like netcat
           work better as a way to speak text protocol to the gearmand.
 

@@ -592,6 +592,99 @@ sub TXTCMD_status {
     $self->write( ".\n" );
 }
 
+=head2 "jobs"
+
+Output format is zero or more lines of:
+
+    [Job function name]\t[Uniq (coalescing) key]\t[Worker address]\t[Number of listeners]\n
+
+Follows by a single line of:
+
+    .\n
+
+\t is a literal tab character
+\n is perl's definition of newline (literal \n on linux, something else on win32)
+
+=cut
+
+sub TXTCMD_jobs {
+    my Gearman::Server::Client $self = shift;
+
+    foreach my $job ($self->{server}->jobs) {
+        my $func = $job->func;
+        my $uniq = $job->uniq;
+        my $worker_addr = "-";
+
+        if (my $worker = $job->worker) {
+            $worker_addr = $worker->peer_addr_string;
+        }
+
+        my $listeners = $job->listeners;
+
+        $self->write("$func\t$uniq\t$worker_addr\t$listeners\n");
+    }
+
+    $self->write(".\n");
+}
+
+=head2 "clients"
+
+Output format is zero or more sections of:
+
+=over
+
+One line of:
+
+    [Client Address]\n
+
+Followed by zero or more lines of:
+
+    \t[Job Function]\t[Uniq (coalescing) key]\t[Worker Address]\n
+
+=back
+
+Follows by a single line of:
+
+    .\n
+
+\t is a literal tab character
+\n is perl's definition of newline (literal \n on linux, something else on win32)
+
+=cut
+
+sub TXTCMD_clients {
+    my Gearman::Server::Client $self = shift;
+
+    my %jobs_by_client;
+
+    foreach my $job ($self->{server}->jobs) {
+        foreach my $client ($job->listeners) {
+            my $ent = $jobs_by_client{$client} ||= [];
+            push @$ent, $job;
+        }
+    }
+
+    foreach my $client ($self->{server}->clients) {
+        my $client_addr = $client->peer_addr_string;
+        $self->write("$client_addr\n");
+        my $jobs = $jobs_by_client{$client} || [];
+
+        foreach my $job (@$jobs) {
+            my $func = $job->func;
+            my $uniq = $job->uniq;
+            my $worker_addr = "-";
+
+            if (my $worker = $job->worker) {
+                $worker_addr = $worker->peer_addr_string;
+            }
+            $self->write("\t$func\t$uniq\t$worker_addr\n");
+        }
+
+    }
+
+    $self->write(".\n");
+}
+
 sub TXTCMD_gladiator {
     my Gearman::Server::Client $self = shift;
     my $args = shift || "";
