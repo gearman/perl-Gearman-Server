@@ -78,6 +78,16 @@ sub clear_listeners {
     $self->{listeners} = [];
 }
 
+sub listeners {
+    my Gearman::Server::Job $self = shift;
+    return @{$self->{listeners}};
+}
+
+sub uniq {
+    my Gearman::Server::Job $self = shift;
+    return $self->{uniq};
+}
+
 sub note_finished {
     my Gearman::Server::Job $self = shift;
     my $success = shift;
