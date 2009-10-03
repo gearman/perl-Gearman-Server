@@ -40,6 +40,10 @@ use fields (
             'jobs_done_since_sleep',
             );
 
+# 60k read buffer default, similar to perlbal's backend read.
+use constant READ_SIZE => 60 * 1024;
+use constant MAX_READ_SIZE => 512 * 1024;
+
 # Class Method:
 sub new {
     my Gearman::Server::Client $self = shift;
@@ -105,7 +109,7 @@ sub close {
 sub event_read {
     my Gearman::Server::Client $self = shift;
 
-    my $read_size = $self->{fast_read} || 1024;
+    my $read_size = $self->{fast_read} || READ_SIZE;
     my $bref = $self->read($read_size);
 
     # Delay close till after buffers are written on EOF. If we are unable
@@ -126,6 +130,17 @@ sub event_read {
         $self->{fast_buffer} = [];
         $self->{fast_read} = undef;
     } else {
+        # Exact read size length likely means we have more sitting on the
+        # socket. Buffer up to half a meg in one go.
+        if (length($$bref) == READ_SIZE) {
+            my $limit = int(MAX_READ_SIZE / READ_SIZE);
+            my @crefs = ($$bref);
+            while (my $cref = $self->read(READ_SIZE)) {
+                push(@crefs, $$cref);
+                last if (length($$cref) < READ_SIZE || $limit-- < 1);
+            }
+            $bref = \join('', @crefs);
+        }
         $self->{read_buf} .= $$bref;
     }
 
