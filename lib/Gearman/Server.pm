@@ -48,7 +48,7 @@ use fields (
             'wakeup_timers', # func -> timer, timer to be canceled or adjusted when job grab/inject is called
             );
 
-our $VERSION = "1.09";
+our $VERSION = "1.10";
 
 =head1 METHODS
 
