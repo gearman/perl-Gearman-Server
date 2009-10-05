@@ -1,3 +1,5 @@
+        * Read client input more aggressively. Speed improvement.
+
         * Add text commands 'jobs' and 'clients' which give information allowing you to trace
           jobs from clients to workers while they are running.
 
