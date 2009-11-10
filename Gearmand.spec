@@ -1,8 +1,8 @@
 name:      Gearmand
 summary:   Gearmand - Gearman job distribution server
-version:   1.09
-release:   2
-vendor:    Brad Fitzpatrick <brad@danga.com>
+version:   1.10
+release:   1
+vendor:    Alan Kasindorf <dormando@rydia.net>
 packager:  Jonathan Steinert <hachi@cpan.org>
 license:   Artistic
 group:     Applications/CPAN
@@ -21,7 +21,7 @@ rm -rf "%{buildroot}"
 %setup -n Gearman-Server-%{version}
 
 %build
-%{__perl} Makefile.PL PREFIX=%{buildroot}%{_prefix}
+%{__perl} Makefile.PL PREFIX=%{buildroot}%{_prefix} INSTALLDIRS=vendor
 make all
 make test
 
@@ -61,5 +61,5 @@ Gearman server libraries.
 
 %files -n perl-Gearman-Server
 %defattr(-,root,root)
-%{_prefix}/lib/*
+%{_prefix}/lib/perl5/vendor_perl/*
 %{_prefix}/share/man/man3
