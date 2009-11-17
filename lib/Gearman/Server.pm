@@ -285,7 +285,13 @@ sub wake_up_sleepers {
     # If we're only going to wakeup 0 workers anyways, don't set up a timer.
     return if $self->{wakeup} == 0;
 
-    my $timer = Danga::Socket->AddTimer($delay, sub { $self->wake_up_sleepers($func) });
+    my $timer = Danga::Socket->AddTimer($delay, sub {
+        # Be sure to not wake up more sleepers if we have no jobs in the queue.
+        # I know the object definition above says I can trust the func element to determine
+        # if there are items in the list, but I'm just gonna be safe, rather than sorry.
+        return unless @{$self->{job_queue}{$func} || []};
+        $self->wake_up_sleepers($func)
+    });
     $self->{wakeup_timers}->{$func} = $timer;
 }
 
