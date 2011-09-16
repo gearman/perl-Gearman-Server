@@ -92,9 +92,21 @@ sub close {
     # Remove self from sleepers, otherwise it will be leaked if another worker
     # for the job never connects.
     my $sleepers = $self->{server}{sleepers};
+    my $sleepers_list = $self->{server}{sleepers_list};
     for my $job (@{ $self->{can_do_list} }) {
         my $sleeping = $sleepers->{$job};
         delete $sleeping->{$self};
+
+        my $new_sleepers_list;
+        for my $client (@{$sleepers_list->{$job}}) {
+            push @{$new_sleepers_list}, $client unless $sleeping->{$client};
+        }
+        if ($new_sleepers_list) {
+            $self->{server}{sleepers_list}->{$job} = $new_sleepers_list;
+        } else {
+            delete $self->{server}{sleepers_list}->{$job};
+        }
+
         delete $sleepers->{$job} unless %$sleeping;
     }
 
