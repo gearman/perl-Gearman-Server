@@ -99,6 +99,7 @@ sub close {
 
         my $new_sleepers_list;
         for my $client (@{$sleepers_list->{$job}}) {
+            next unless $client;
             push @{$new_sleepers_list}, $client unless $sleeping->{$client};
         }
         if ($new_sleepers_list) {
