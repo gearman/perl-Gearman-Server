@@ -1,3 +1,7 @@
+1.12 2014-12-14
+
+        * Add HACKING file
+
         * Fix memory leak when clients disconnect (sleeper list isn't pruned).
           Fixes CPAN RT 70728 (Marsh Yamazaki)
 
