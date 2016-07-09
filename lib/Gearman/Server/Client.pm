@@ -1,5 +1,8 @@
 package Gearman::Server::Client;
 
+use strict;
+use warnings;
+
 =head1 NAME
 
 Gearman::Server::Client
@@ -20,7 +23,6 @@ The line-based administrative commands are documented below.
 
 =cut
 
-use strict;
 use Danga::Socket;
 use base 'Danga::Socket';
 use fields (
