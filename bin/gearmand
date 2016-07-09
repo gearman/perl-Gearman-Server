@@ -23,9 +23,9 @@ daemonization.
 Make the daemon run in the background (good for init.d scripts, bad
 for running under daemontools/supervise).
 
-=item --port=7003 / -p 7003
+=item --port=4730 / -p 4730
 
-Set the port number, defaults to 7003.
+Set the port number, defaults to 4730.
 
 =item --pidfile=/some/dir/gearmand.pid
 
@@ -122,7 +122,7 @@ my (
     $wakeup,
     $wakeup_delay,
    );
-my $conf_port = 7003;
+my $conf_port = 4730;
 
 Getopt::Long::GetOptions(
                          'd|daemonize'    => \$daemonize,
