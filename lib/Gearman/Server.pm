@@ -1,4 +1,5 @@
 package Gearman::Server;
+$Gearman::Server::VERSION = "1.13.001";
 
 use strict;
 use warnings;
@@ -51,7 +52,6 @@ use fields (
     , # func -> timer, timer to be canceled or adjusted when job grab/inject is called
 );
 
-our $VERSION = "1.12";
 
 =head1 METHODS
 
