@@ -1,5 +1,8 @@
 package Gearman::Server::Job;
+
 use strict;
+
+use Gearman::Server::Client;
 use Scalar::Util;
 use Sys::Hostname;
 
