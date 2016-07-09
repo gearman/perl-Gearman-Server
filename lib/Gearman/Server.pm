@@ -27,13 +27,20 @@ script, and not use Gearman::Server directly.
 
 =cut
 
+use Carp qw(croak);
 use Gearman::Server::Client;
 use Gearman::Server::Listener;
 use Gearman::Server::Job;
-use Socket qw(IPPROTO_TCP SOL_SOCKET SOCK_STREAM AF_UNIX SOCK_STREAM PF_UNSPEC);
-use Carp qw(croak);
-use Sys::Hostname ();
 use IO::Handle    ();
+use Socket qw/
+    IPPROTO_TCP
+    SOL_SOCKET
+    SOCK_STREAM
+    AF_UNIX
+    SOCK_STREAM
+    PF_UNSPEC
+    /;
+use Sys::Hostname ();
 
 use fields (
     'client_map',      # fd -> Client
@@ -51,7 +58,6 @@ use fields (
     'wakeup_timers'
     , # func -> timer, timer to be canceled or adjusted when job grab/inject is called
 );
-
 
 =head1 METHODS
 
