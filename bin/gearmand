@@ -97,7 +97,8 @@ use strict;
 use warnings;
 
 BEGIN {
-    $^P = 0x200;    # Provide informative names to anonymous subroutines
+    # Provide informative names to anonymous subroutines
+    $^P = 0x200;
 }
 use FindBin;
 use lib "$FindBin::Bin/lib";
@@ -126,7 +127,9 @@ Getopt::Long::GetOptions(
     'accept=i'       => \$accept,
     'wakeup=i'       => \$wakeup,
     'wakeup-delay=f' => \$wakeup_delay,
-    'notifypid|n=i'  => \$notify_pid,     # for test suite only.
+
+    # for test suite only.
+    'notifypid|n=i' => \$notify_pid,
 );
 
 daemonize() if $daemonize;
@@ -135,8 +138,8 @@ daemonize() if $daemonize;
 # convenient place to kill the process
 our $graceful_shutdown = 0;
 
-$SIG{'PIPE'} = "IGNORE";    # handled manually
-
+# handled manually
+$SIG{'PIPE'} = "IGNORE";
 my $server = Gearman::Server->new(
     wakeup       => $wakeup,
     wakeup_delay => $wakeup_delay,
