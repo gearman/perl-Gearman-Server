@@ -1,6 +1,7 @@
 package Gearman::Server::Job;
 
 use strict;
+use warnings;
 
 use Gearman::Server::Client;
 use Scalar::Util;
