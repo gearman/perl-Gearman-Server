@@ -31,7 +31,7 @@ use Carp qw(croak);
 use Gearman::Server::Client;
 use Gearman::Server::Listener;
 use Gearman::Server::Job;
-use IO::Handle    ();
+use IO::Handle ();
 use Socket qw/
     IPPROTO_TCP
     SOL_SOCKET
@@ -55,8 +55,8 @@ use fields (
     'listeners',       # arrayref of listener objects
     'wakeup',          # number of workers to wake
     'wakeup_delay',    # seconds to wait before waking more workers
-    'wakeup_timers'
-    , # func -> timer, timer to be canceled or adjusted when job grab/inject is called
+    'wakeup_timers',   # func -> timer, timer to be canceled or adjusted
+                       # when job grab/inject is called
 );
 
 =head1 METHODS
