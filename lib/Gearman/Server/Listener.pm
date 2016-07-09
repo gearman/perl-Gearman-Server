@@ -1,6 +1,8 @@
 package Gearman::Server::Listener;
 
 use strict;
+use warnings;
+
 use base 'Danga::Socket';
 use fields qw/
     server
