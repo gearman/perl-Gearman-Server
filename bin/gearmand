@@ -95,8 +95,9 @@ L<Gearman::Client::Async>
 package Gearmand;
 use strict;
 use warnings;
+
 BEGIN {
-    $^P = 0x200;  # Provide informative names to anonymous subroutines
+    $^P = 0x200;    # Provide informative names to anonymous subroutines
 }
 use FindBin;
 use lib "$FindBin::Bin/lib";
@@ -113,27 +114,20 @@ use Scalar::Util ();
 
 $DEBUG = 0;
 
-my (
-    $daemonize,
-    $nokeepalive,
-    $notify_pid,
-    $opt_pidfile,
-    $accept,
-    $wakeup,
-    $wakeup_delay,
-   );
+my ($daemonize, $nokeepalive, $notify_pid, $opt_pidfile, $accept, $wakeup,
+    $wakeup_delay,);
 my $conf_port = 4730;
 
 Getopt::Long::GetOptions(
-                         'd|daemonize'    => \$daemonize,
-                         'p|port=i'       => \$conf_port,
-                         'debug=i'        => \$DEBUG,
-                         'pidfile=s'      => \$opt_pidfile,
-                         'accept=i'       => \$accept,
-                         'wakeup=i'       => \$wakeup,
-                         'wakeup-delay=f' => \$wakeup_delay,
-                         'notifypid|n=i'  => \$notify_pid,  # for test suite only.
-                         );
+    'd|daemonize'    => \$daemonize,
+    'p|port=i'       => \$conf_port,
+    'debug=i'        => \$DEBUG,
+    'pidfile=s'      => \$opt_pidfile,
+    'accept=i'       => \$accept,
+    'wakeup=i'       => \$wakeup,
+    'wakeup-delay=f' => \$wakeup_delay,
+    'notifypid|n=i'  => \$notify_pid,     # for test suite only.
+);
 
 daemonize() if $daemonize;
 
@@ -141,13 +135,14 @@ daemonize() if $daemonize;
 # convenient place to kill the process
 our $graceful_shutdown = 0;
 
-$SIG{'PIPE'} = "IGNORE";  # handled manually
+$SIG{'PIPE'} = "IGNORE";    # handled manually
 
 my $server = Gearman::Server->new(
-                                  wakeup          => $wakeup,
-                                  wakeup_delay    => $wakeup_delay,
-             );
-my $ssock  = $server->create_listening_sock($conf_port, accept_per_loop => $accept);
+    wakeup       => $wakeup,
+    wakeup_delay => $wakeup_delay,
+);
+my $ssock
+    = $server->create_listening_sock($conf_port, accept_per_loop => $accept);
 
 if ($opt_pidfile) {
     open my $fh, '>', $opt_pidfile or die "Could not open $opt_pidfile: $!";
@@ -159,11 +154,11 @@ sub shutdown_graceful {
     return if $graceful_shutdown;
 
     my $ofds = Danga::Socket->OtherFds;
-    delete $ofds->{fileno($ssock)};
+    delete $ofds->{ fileno($ssock) };
     $ssock->close;
     $graceful_shutdown = 1;
     shutdown_if_calm();
-}
+} ## end sub shutdown_graceful
 
 sub shutdown_if_calm {
     exit 0 unless $server->jobs_outstanding;
@@ -198,7 +193,7 @@ sub daemonize {
     open(STDIN,  "+>/dev/null");
     open(STDOUT, "+>&STDIN");
     open(STDERR, "+>&STDIN");
-}
+} ## end sub daemonize
 
 kill 'USR1', $notify_pid if $notify_pid;
 Danga::Socket->EventLoop();
