@@ -1,9 +1,10 @@
 CHANGES
-gearmand
+bin/gearmand
 lib/Gearman/Server.pm
 lib/Gearman/Server/Client.pm
 lib/Gearman/Server/Job.pm
 lib/Gearman/Server/Listener.pm
+t/00-use.t
 Makefile.PL
 MANIFEST			This list of files
 MANIFEST.SKIP
