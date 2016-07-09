@@ -1,5 +1,8 @@
 package Gearman::Server;
 
+use strict;
+use warnings;
+
 =head1 NAME
 
 Gearman::Server - function call "router" and load balancer
@@ -23,7 +26,6 @@ script, and not use Gearman::Server directly.
 
 =cut
 
-use strict;
 use Gearman::Server::Client;
 use Gearman::Server::Listener;
 use Gearman::Server::Job;
