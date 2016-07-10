@@ -62,6 +62,10 @@ is more cooperative in gearmand's multitasking model.
 Negative One (-1) means that this event won't happe, so only the initial workers will be woken up to
 handle jobs in the queue.
 
+=item --version
+
+Display the version and exit.
+
 =back
 
 =head1 COPYRIGHT
@@ -127,6 +131,10 @@ Getopt::Long::GetOptions(
     'accept=i'       => \$accept,
     'wakeup=i'       => \$wakeup,
     'wakeup-delay=f' => \$wakeup_delay,
+    'version|V'      => sub {
+        print "Gearman::Server $Gearman::Server::VERSION $/";
+        exit;
+    },
 
     # for test suite only.
     'notifypid|n=i' => \$notify_pid,
