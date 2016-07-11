@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Gearman::Server::Client
+Gearman::Server::Client - client for gearmand
 
 =head1 NAME
 
