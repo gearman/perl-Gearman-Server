@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use version;
 use Test::More;
 
 my @mn = qw/
@@ -9,7 +10,7 @@ my @mn = qw/
     Gearman::Server::Job
     /;
 
-my $v = '1.13.001';
+my $v = qv("v1.130.0");
 
 
 foreach my $n (@mn) {

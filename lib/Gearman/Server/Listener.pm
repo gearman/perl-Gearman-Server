@@ -1,5 +1,6 @@
 package Gearman::Server::Listener;
-$Gearman::Server::Listener::VERSION = "1.13.001";
+use version;
+$Gearman::Server::Listener::VERSION = qv("v1.130.0");
 
 use strict;
 use warnings;
