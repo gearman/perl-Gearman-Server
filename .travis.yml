@@ -25,6 +25,7 @@ install:
 
 script:
   - perl Makefile.PL
+  - make
   - PERL5OPT=-MDevel::Cover=-coverage,statement,branch,condition,path,subroutine prove -b -r -s t
 
 after_success:
