@@ -110,8 +110,7 @@ BEGIN {
     # Provide informative names to anonymous subroutines
     $^P = 0x200;
 }
-use FindBin;
-use lib "$FindBin::Bin/lib";
+
 use Gearman::Server;
 
 use Carp;
