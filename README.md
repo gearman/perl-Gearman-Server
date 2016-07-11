@@ -5,7 +5,7 @@ Gearman::Server
 [![Build Status](https://travis-ci.org/p-alik/Gearman-Server.png)](https://travis-ci.org/p-alik/Gearman-Server)
 [![Coverage Status](https://coveralls.io/repos/github/p-alik/Gearman-Server/badge.png)](https://coveralls.io/github/p-alik/Gearman-Server)
 
-This repository contains perl implementation [Gearman](http://gearman.org) daemon
+This repository contains perl implementation of [Gearman](http://gearman.org) daemon
 
 see also
 ------------
