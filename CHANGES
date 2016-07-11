@@ -1,8 +1,17 @@
+1.13.001 2014-12-14
+        * Feature Request: #115368 for Gearman-Server: Allow bind to specific IP address
+        * Fix bug #115458 Distributions contain no tests.
+          Actually only use ok and version tests
+        * Fix bug #89033 typo fixes
+        * Fix bug #107045 [PATCH] fix pod whatis
+        * Fix bug #115350 Uses old port by default (7003) should use 4730
+        * pod usage
+
 1.12 2014-12-14
 
         * Add HACKING file
 
-        * Fix memory leak when clients disconnect (sleeper list isn't pruned).
+        * Fix bug #70728 memory leak when clients disconnect (sleeper list isn't pruned).
           Fixes CPAN RT 70728 (Marsh Yamazaki)
 
 1.11 2010-01-17
