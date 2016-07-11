@@ -27,6 +27,12 @@ for running under daemontools/supervise).
 
 Set the port number, defaults to 4730.
 
+=item --listen hostname / -L hostname
+
+Address the server should listen on.
+
+Default is
+
 =item --pidfile=/some/dir/gearmand.pid
 
 Write a pidfile when starting up
@@ -120,13 +126,14 @@ use Scalar::Util ();
 $DEBUG = 0;
 
 my ($daemonize, $nokeepalive, $notify_pid, $opt_pidfile, $accept, $wakeup,
-    $wakeup_delay,);
+    $wakeup_delay, $conf_host,);
 my $conf_port = 4730;
 
 Getopt::Long::GetOptions(
     'd|daemonize'    => \$daemonize,
     'p|port=i'       => \$conf_port,
-    'debug=i'        => \$DEBUG,
+    'listen|L=s'     => \$conf_host,
+    'debug=i'          => \$DEBUG,
     'pidfile=s'      => \$opt_pidfile,
     'accept=i'       => \$accept,
     'wakeup=i'       => \$wakeup,
@@ -152,8 +159,11 @@ my $server = Gearman::Server->new(
     wakeup       => $wakeup,
     wakeup_delay => $wakeup_delay,
 );
-my $ssock
-    = $server->create_listening_sock($conf_port, accept_per_loop => $accept);
+my $ssock = $server->create_listening_sock(
+    $conf_port,
+    accept_per_loop => $accept,
+    local_addr      => $conf_host
+);
 
 if ($opt_pidfile) {
     open my $fh, '>', $opt_pidfile or die "Could not open $opt_pidfile: $!";

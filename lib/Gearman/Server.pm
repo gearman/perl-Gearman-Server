@@ -130,9 +130,19 @@ sub debug {
 
 =head2 create_listening_sock
 
-  $server_object->create_listening_sock( $portnum )
+  $server_object->create_listening_sock( $portnum, \%options )
 
-Add a TCP port listener for incoming Gearman worker and client connections.
+Add a TCP port listener for incoming Gearman worker and client connections.  Options:
+
+=over 4
+
+=item accept_per_loop
+
+=item local_addr
+
+Bind socket to only this address.
+
+=back
 
 =cut
 
@@ -140,6 +150,7 @@ sub create_listening_sock {
     my ($self, $portnum, %opts) = @_;
 
     my $accept_per_loop = delete $opts{accept_per_loop};
+    my $local_addr      = delete $opts{local_addr};
 
     warn "Extra options passed into create_listening_sock: "
         . join(', ', keys %opts) . "\n"
@@ -151,7 +162,8 @@ sub create_listening_sock {
         Proto     => IPPROTO_TCP,
         Blocking  => 0,
         Reuse     => 1,
-        Listen    => 1024
+        Listen    => 1024,
+        ($local_addr ? (LocalAddr => $local_addr) : ())
     ) or die "Error creating socket: $@\n";
 
     my $listeners = $self->{listeners};
