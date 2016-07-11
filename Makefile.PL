@@ -8,8 +8,9 @@ WriteMakefile(
     ABSTRACT_FROM  => 'lib/Gearman/Server.pm',
     EXE_FILES      => ['bin/gearmand'],
     BUILD_REQUIRES => {
-        "Test::More" => 0,
-        "version"    => 0,
+        "Test::More"   => 0,
+        "Test::Script" => 1.12,
+        "version"      => 0,
     },
     PREREQ_PM => {
         "Gearman::Util" => 0,
