@@ -132,7 +132,7 @@ Getopt::Long::GetOptions(
     'wakeup=i'       => \$wakeup,
     'wakeup-delay=f' => \$wakeup_delay,
     'version|V'      => sub {
-        print "Gearman::Server $Gearman::Server::VERSION $/";
+        print "Gearman::Server $Gearman::Server::VERSION$/";
         exit;
     },
 
