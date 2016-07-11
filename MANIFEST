@@ -2,6 +2,7 @@ CHANGES
 MANIFEST                                 This list of files
 MANIFEST.SKIP
 Makefile.PL
+README.md
 bin/gearmand
 lib/Gearman/Server.pm
 lib/Gearman/Server/Client.pm
