@@ -114,14 +114,16 @@ use FindBin;
 use lib "$FindBin::Bin/lib";
 use Gearman::Server;
 
-use Getopt::Long;
 use Carp;
 use Danga::Socket 1.52;
+use Gearman::Util;
+use Getopt::Long;
 use IO::Socket::INET;
 use POSIX ();
-use Gearman::Util;
-use vars qw($DEBUG);
+use Pod::Usage;
 use Scalar::Util ();
+
+use vars qw($DEBUG);
 
 $DEBUG = 0;
 
@@ -133,13 +135,17 @@ Getopt::Long::GetOptions(
     'd|daemonize'    => \$daemonize,
     'p|port=i'       => \$conf_port,
     'listen|L=s'     => \$conf_host,
-    'debug=i'          => \$DEBUG,
+    'debug=i'        => \$DEBUG,
     'pidfile=s'      => \$opt_pidfile,
     'accept=i'       => \$accept,
     'wakeup=i'       => \$wakeup,
     'wakeup-delay=f' => \$wakeup_delay,
     'version|V'      => sub {
         print "Gearman::Server $Gearman::Server::VERSION$/";
+        exit;
+    },
+    'help|?' => sub {
+        pod2usage(-verbose => 1);
         exit;
     },
 
