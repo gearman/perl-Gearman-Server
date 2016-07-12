@@ -1,4 +1,7 @@
-1.13.001 2014-12-14
+1.13.002 2016-07-11
+        * pod links to gearmand repaired
+
+1.13.001 2016-07-11
         * Feature Request: #115368 for Gearman-Server: Allow bind to specific IP address
         * Fix bug #115458 Distributions contain no tests.
           Actually only use ok and version tests
