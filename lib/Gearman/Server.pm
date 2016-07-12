@@ -32,6 +32,8 @@ use Carp qw(croak);
 use Gearman::Server::Client;
 use Gearman::Server::Listener;
 use Gearman::Server::Job;
+use Gearman::Util;
+use IO::Socket::INET;
 use IO::Handle ();
 use Socket qw/
     IPPROTO_TCP
