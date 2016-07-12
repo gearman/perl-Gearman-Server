@@ -115,9 +115,7 @@ use Gearman::Server;
 
 use Carp;
 use Danga::Socket 1.52;
-use Gearman::Util;
 use Getopt::Long;
-use IO::Socket::INET;
 use POSIX ();
 use Pod::Usage;
 use Scalar::Util ();
