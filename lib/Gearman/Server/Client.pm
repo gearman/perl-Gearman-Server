@@ -25,6 +25,7 @@ The line-based administrative commands are documented below.
 
 =cut
 
+use Gearman::Util;
 use Danga::Socket;
 use base 'Danga::Socket';
 use fields (
