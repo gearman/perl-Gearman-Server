@@ -19,4 +19,15 @@ WriteMakefile(
     },
     AUTHOR =>
         'Brad Fitzpatrick (brad@danga.com), Brad Whitaker (whitaker@danga.com)',
+    META_MERGE => {
+        'meta-spec' => { version => 2 },
+        resources => {
+            repository => {
+                type => 'git',
+                url  => 'https://github.com/p-alik/Gearman-Server.git',
+                web  => 'https://github.com/p-alik/Gearman-Server',
+            },
+        },
+    },
+    
 );
