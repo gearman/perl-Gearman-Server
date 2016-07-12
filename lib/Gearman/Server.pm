@@ -478,6 +478,6 @@ __END__
 
 =head1 SEE ALSO
 
-L<bin/gearmand>
+L<gearmand>
 
 =cut
