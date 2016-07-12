@@ -12,7 +12,7 @@ my @mn = qw/
     Gearman::Server::Job
     /;
 
-my $v = qv("v1.130.1");
+my $v = qv("v1.130.2");
 
 foreach my $n (@mn) {
     use_ok($n);
