@@ -23,7 +23,7 @@ The servers connect them, routing function call requests to the
 appropriate workers, multiplexing responses to duplicate requests as
 requested, etc.
 
-More than likely, you want to use the provided L<gearmand> wrapper
+More than likely, you want to use the provided L<bin/gearmand> wrapper
 script, and not use Gearman::Server directly.
 
 =cut
