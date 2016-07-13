@@ -31,4 +31,17 @@ can_ok $gs, qw/
     set_unique_job
     grab_job
     /;
+
+subtest "create_listening_sock", sub {
+  my $gs = new_ok($mn);
+  my $port = 12345;
+  my ($accept, $la);
+  ok(my $sock = $gs->create_listening_sock(
+      $port,
+      accept_per_loop => $accept,
+      local_addr      => $la
+  ));
+  isa_ok($sock, "IO::Socket::INET");
+};
+
 done_testing;
