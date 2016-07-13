@@ -123,20 +123,17 @@ use Scalar::Util ();
 use vars qw($DEBUG);
 
 $DEBUG = 0;
-
-my ($daemonize, $nokeepalive, $notify_pid, $opt_pidfile, $accept, $wakeup,
-    $wakeup_delay, $conf_host,);
 my $conf_port = 4730;
 
-Getopt::Long::GetOptions(
-    'd|daemonize'    => \$daemonize,
+GetOptions(
+    'd|daemonize'    => \my $daemonize,
     'p|port=i'       => \$conf_port,
-    'listen|L=s'     => \$conf_host,
+    'listen|L=s'     => \my $conf_host,
     'debug=i'        => \$DEBUG,
-    'pidfile=s'      => \$opt_pidfile,
-    'accept=i'       => \$accept,
-    'wakeup=i'       => \$wakeup,
-    'wakeup-delay=f' => \$wakeup_delay,
+    'pidfile=s'      => \my $opt_pidfile,
+    'accept=i'       => \my $accept,
+    'wakeup=i'       => \my $wakeup,
+    'wakeup-delay=f' => \my $wakeup_delay,
     'version|V'      => sub {
         print "Gearman::Server $Gearman::Server::VERSION$/";
         exit;
@@ -147,7 +144,7 @@ Getopt::Long::GetOptions(
     },
 
     # for test suite only.
-    'notifypid|n=i' => \$notify_pid,
+    'notifypid|n=i' => \my $notify_pid,
 );
 
 daemonize() if $daemonize;
@@ -222,8 +219,3 @@ sub daemonize {
 kill 'USR1', $notify_pid if $notify_pid;
 Danga::Socket->EventLoop();
 
-# Local Variables:
-# mode: perl
-# c-basic-indent: 4
-# indent-tabs-mode: nil
-# End:
