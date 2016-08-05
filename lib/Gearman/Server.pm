@@ -84,19 +84,22 @@ Specify a port which you would like the Gearman::Server to listen on for TCP con
 
 sub new {
     my ($class, %opts) = @_;
-    my $self = ref $class ? $class : fields::new($class);
+    my $self = ref($class) ? $class : fields::new($class);
 
-    $self->{client_map}    = {};
-    $self->{sleepers}      = {};
-    $self->{sleepers_list} = {};
-    $self->{job_queue}     = {};
-    $self->{job_of_handle} = {};
-    $self->{max_queue}     = {};
-    $self->{job_of_uniq}   = {};
-    $self->{listeners}     = [];
-    $self->{wakeup}        = 3;
-    $self->{wakeup_delay}  = .1;
-    $self->{wakeup_timers} = {};
+    $self->{$_} = {} for qw/
+        client_map
+        sleepers
+        sleepers_list
+        job_queue
+        job_of_handle
+        max_queue
+        job_of_uniq
+        wakeup_timers
+        /;
+
+    $self->{listeners}    = [];
+    $self->{wakeup}       = 3;
+    $self->{wakeup_delay} = .1;
 
     $self->{handle_ct}   = 0;
     $self->{handle_base} = "H:" . Sys::Hostname::hostname() . ":";
@@ -104,7 +107,6 @@ sub new {
     my $port = delete $opts{port};
 
     my $wakeup = delete $opts{wakeup};
-
     if (defined $wakeup) {
         die "Invalid value passed in wakeup option"
             if $wakeup < 0 && $wakeup != -1;
@@ -112,7 +114,6 @@ sub new {
     }
 
     my $wakeup_delay = delete $opts{wakeup_delay};
-
     if (defined $wakeup_delay) {
         die "Invalid value passed in wakeup_delay option"
             if $wakeup_delay < 0 && $wakeup_delay != -1;
@@ -120,6 +121,7 @@ sub new {
     }
 
     croak("Unknown options") if %opts;
+
     $self->create_listening_sock($port);
 
     return $self;
