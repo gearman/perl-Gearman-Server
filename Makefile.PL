@@ -8,20 +8,23 @@ WriteMakefile(
     ABSTRACT_FROM  => 'lib/Gearman/Server.pm',
     EXE_FILES      => ['bin/gearmand'],
     BUILD_REQUIRES => {
-        "Test::More"   => 0,
-        "Test::Script" => 1.12,
-        "version"      => 0,
+        "Test::Exception" => 0,
+        "Test::More"      => 0,
+        "Test::Script"    => 1.12,
+        "Sys::Hostname"   => 0,
+        "version"         => 0,
     },
     PREREQ_PM => {
         "Gearman::Util" => 0,
         "Danga::Socket" => 1.52,
+        "Sys::Hostname" => 0,
         "version"       => 0,
     },
     AUTHOR =>
         'Brad Fitzpatrick (brad@danga.com), Brad Whitaker (whitaker@danga.com)',
     META_MERGE => {
         'meta-spec' => { version => 2 },
-        resources => {
+        resources   => {
             repository => {
                 type => 'git',
                 url  => 'https://github.com/p-alik/Gearman-Server.git',
@@ -29,5 +32,5 @@ WriteMakefile(
             },
         },
     },
-    
+
 );
