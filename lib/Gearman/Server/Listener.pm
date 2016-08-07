@@ -5,6 +5,12 @@ $Gearman::Server::Listener::VERSION = qv("v1.130.2");
 use strict;
 use warnings;
 
+=head1 NAME
+
+Gearman::Server::Listener - a listener for L<Gearman::Server>
+
+=cut
+# =head1 DESCRIPTION
 use base 'Danga::Socket';
 use fields qw/
     server
@@ -19,6 +25,9 @@ use Socket qw/
     SO_ERROR
     /;
 
+=head1 METHODS
+
+=cut
 sub new {
     my Gearman::Server::Listener $self = shift;
     my $sock                           = shift;
@@ -49,6 +58,9 @@ sub new {
     return $self;
 } ## end sub new
 
+=head2 event_read()
+
+=cut
 sub event_read {
     my Gearman::Server::Listener $self = shift;
 
