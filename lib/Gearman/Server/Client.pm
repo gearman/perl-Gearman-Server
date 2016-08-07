@@ -9,7 +9,7 @@ use warnings;
 
 Gearman::Server::Client - client for gearmand
 
-=head1 NAME
+=head1 DESCRIPTION
 
 Used by L<Gearman::Server> to instantiate connections from clients.
 Clients speak either a binary protocol, for normal operation (calling
@@ -22,6 +22,8 @@ they're well-implemented in L<Gearman::Client>, L<Gearman::Worker>,
 and L<Gearman::Client::Async>, if that's any consolation.
 
 The line-based administrative commands are documented below.
+
+=head1 METHODS
 
 =cut
 
@@ -91,12 +93,20 @@ sub new {
     return $self;
 } ## end sub new
 
+=head2 option($option)
+
+=cut
+
 sub option {
     my Gearman::Server::Client $self = shift;
     my $option = shift;
 
     return $self->{options}->{$option};
 } ## end sub option
+
+=head2 close()
+
+=cut
 
 sub close {
     my Gearman::Server::Client $self = shift;
@@ -142,6 +152,10 @@ sub close {
 
     $self->SUPER::close;
 } ## end sub close
+
+=head2 event_read()
+
+=cut
 
 # Client
 sub event_read {
@@ -216,11 +230,19 @@ sub event_read {
     } while ($found_cmd);
 } ## end sub event_read
 
+=head2 event_write()
+
+=cut
+
 sub event_write {
     my $self = shift;
     my $done = $self->write(undef);
     $self->watch_write(0) if $done;
 }
+
+=head2 process_line($line)
+
+=cut
 
 # Line based command processor
 sub process_line {
@@ -563,11 +585,15 @@ sub event_hup { my $self = shift; $self->close; }
 
 =head1 Line based commands
 
-These commands are used for administrative or statistic tasks to be done on the gearman server. They can be entered using a line based client (telnet, etc.) by connecting to the listening port (7003) and are also intended to be machine parsable.
+These commands are used for administrative or statistic tasks to be done on the
+gearman server. They can be entered using a line based client (telnet, etc.) by
+connecting to the listening port (4730) and are also intended to be machine
+parsable.
 
 =head2 "workers"
 
-Emits list of registered workers, their fds, IPs, client ids, and list of registered abilities (function names they can do).  Of format:
+Emits list of registered workers, their fds, IPs, client ids, and list of
+registered abilities (function names they can do).  Of format:
 
   fd ip.x.y.z client_id : func_a func_b func_c
   fd ip.x.y.z client_id : func_a func_b func_c
@@ -593,7 +619,9 @@ sub TXTCMD_workers {
 
 =head2 "status"
 
-The output format of this function is tab separated columns as follows, followed by a line consisting of a fullstop and a newline (".\n") to indicate the end of output.
+The output format of this function is tab separated columns as follows,
+followed by a line consisting of a fullstop and a newline (".\n") to indicate
+the end of output.
 
 =over
 
@@ -603,7 +631,8 @@ A string denoting the name of the function of the job
 
 =item Number in queue
 
-A positive integer indicating the total number of jobs for this function in the queue. This includes currently running ones as well (next column)
+A positive integer indicating the total number of jobs for this function in the
+queue. This includes currently running ones as well (next column)
 
 =item Number of jobs running
 
@@ -611,7 +640,9 @@ A positive integer showing how many jobs of this function are currently running
 
 =item Number of capable workers
 
-A positive integer denoting the maximum possible count of workers that could be doing this job. Though they may not all be working on it due to other tasks holding them busy.
+A positive integer denoting the maximum possible count of workers that could be
+doing this job. Though they may not all be working on it due to other tasks
+holding them busy.
 
 =back
 
@@ -774,11 +805,14 @@ sub TXTCMD_gladiator {
 
 =head2 "maxqueue" function [max_queue_size]
 
-For a given function of job, the maximum queue size is adjusted to be max_queue_size jobs long. A negative value indicates unlimited queue size.
+For a given function of job, the maximum queue size is adjusted to be
+max_queue_size jobs long. A negative value indicates unlimited queue size.
 
-If the max_queue_size value is not supplied then it is unset (and the default maximum queue size will apply to this function).
+If the max_queue_size value is not supplied then it is unset (and the default
+maximum queue size will apply to this function).
 
-This function will return OK upon success, and will return ERR incomplete_args upon an invalid number of arguments.
+This function will return OK upon success, and will return ERR incomplete_args
+upon an invalid number of arguments.
 
 =cut
 
@@ -797,7 +831,8 @@ sub TXTCMD_maxqueue {
 
 =head2 "shutdown" ["graceful"]
 
-Close the server.  Or "shutdown graceful" to close the listening socket, then close the server when traffic has died away.
+Close the server.  Or "shutdown graceful" to close the listening socket, then
+close the server when traffic has died away.
 
 =cut
 
