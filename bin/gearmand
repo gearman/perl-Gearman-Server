@@ -25,7 +25,7 @@ for running under daemontools/supervise).
 
 =item --port=4730 / -p 4730
 
-Set the port number, defaults to 4730.
+Set the port number, default to 4730.
 
 =item --listen hostname / -L hostname
 
