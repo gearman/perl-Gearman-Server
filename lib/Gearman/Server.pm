@@ -133,9 +133,7 @@ sub debug {
     #warn "$msg\n";
 }
 
-=head2 create_listening_sock
-
-  $server_object->create_listening_sock( $portnum, \%options )
+=head2 create_listening_sock($portnum, %options)
 
 Add a TCP port listener for incoming Gearman worker and client connections.  Options:
 
@@ -179,6 +177,10 @@ sub create_listening_sock {
     return $ssock;
 } ## end sub create_listening_sock
 
+=head2 new_client($sock)
+
+=cut
+
 sub new_client {
     my ($self, $sock) = @_;
     my $client = Gearman::Server::Client->new($sock, $self);
@@ -186,15 +188,27 @@ sub new_client {
     $self->{client_map}{ $client->{fd} } = $client;
 } ## end sub new_client
 
+=head2 note_disconnected_client($client)
+
+=cut
+
 sub note_disconnected_client {
     my ($self, $client) = @_;
     delete $self->{client_map}{ $client->{fd} };
 }
 
+=head2 clients()
+
+=cut
+
 sub clients {
     my $self = shift;
     return values %{ $self->{client_map} };
 }
+
+=head2 to_inprocess_server()
+
+=cut
 
 # Returns a socket that is connected to the server, we can then use this
 # socket with a Gearman::Client::Async object to run clients and servers in the
@@ -222,7 +236,7 @@ sub to_inprocess_server {
     return $psock;
 } ## end sub to_inprocess_server
 
-=head2 start_worker
+=head2 start_worker($prog)
 
   $pid = $server_object->start_worker( $prog )
 
@@ -278,6 +292,10 @@ sub start_worker {
     return wantarray ? ($pid, $client) : $pid;
 } ## end sub start_worker
 
+=head2 enqueue_job()
+
+=cut
+
 sub enqueue_job {
     my ($self, $job, $highpri) = @_;
     my $jq = ($self->{job_queue}{ $job->{func} } ||= []);
@@ -303,6 +321,10 @@ sub enqueue_job {
 
     $self->{job_of_handle}{ $job->{'handle'} } = $job;
 } ## end sub enqueue_job
+
+=head2 wake_up_sleepers($func)
+
+=cut
 
 sub wake_up_sleepers {
     my ($self, $func) = @_;
@@ -362,6 +384,10 @@ sub _wake_up_some {
     return;
 } ## end sub _wake_up_some
 
+=head2 on_client_sleep($client)
+
+=cut
+
 sub on_client_sleep {
     my $self = shift;
     my Gearman::Server::Client $cl = shift;
@@ -398,20 +424,36 @@ sub on_client_sleep {
     } ## end foreach my $cd (@{ $cl->{can_do_list...}})
 } ## end sub on_client_sleep
 
+=head2 jobs_outstanding()
+
+=cut
+
 sub jobs_outstanding {
     my Gearman::Server $self = shift;
     return scalar keys %{ $self->{job_queue} };
 }
+
+=head2 jobs()
+
+=cut
 
 sub jobs {
     my Gearman::Server $self = shift;
     return values %{ $self->{job_of_handle} };
 }
 
+=head2 jobs_by_handle($ahndle)
+
+=cut
+
 sub job_by_handle {
     my ($self, $handle) = @_;
     return $self->{job_of_handle}{$handle};
 }
+
+=head2 note_job_finished($job)
+
+=cut
 
 sub note_job_finished {
     my Gearman::Server $self     = shift;
@@ -427,6 +469,10 @@ sub note_job_finished {
     delete $self->{job_of_handle}{ $job->{handle} };
 } ## end sub note_job_finished
 
+=head2 set_max_queue($func, $max)
+
+=cut
+
 # <0/undef/"" to reset.  else integer max depth.
 sub set_max_queue {
     my ($self, $func, $max) = @_;
@@ -438,10 +484,18 @@ sub set_max_queue {
     }
 } ## end sub set_max_queue
 
+=head2 new_job_handle()
+
+=cut
+
 sub new_job_handle {
     my $self = shift;
     return $self->{handle_base} . (++$self->{handle_ct});
 }
+
+=head2 job_of_unique($func, $uniq)
+
+=cut
 
 sub job_of_unique {
     my ($self, $func, $uniq) = @_;
@@ -449,11 +503,19 @@ sub job_of_unique {
     return $self->{job_of_uniq}{$func}{$uniq};
 }
 
+=head2 set_unique_job($func, $uniq, $job)
+
+=cut
+
 sub set_unique_job {
     my ($self, $func, $uniq, $job) = @_;
     $self->{job_of_uniq}{$func} ||= {};
     $self->{job_of_uniq}{$func}{$uniq} = $job;
 }
+
+=head2 grab_job($func)
+
+=cut
 
 sub grab_job {
     my ($self, $func) = @_;
