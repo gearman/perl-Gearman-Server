@@ -68,15 +68,46 @@ use fields (
 
   $server_object = Gearman::Server->new( %options )
 
-Creates and returns a new Gearman::Server object, which attaches itself to the Danga::Socket event loop. The server will begin operating when the Danga::Socket runloop is started. This means you need to start up the runloop before anything will happen.
+Creates and returns a new Gearman::Server object, which attaches itself to the
+L<Danga::Socket> event loop. The server will begin operating when the 
+L<Danga::Socket> runloop is started. This means you need to start up the 
+runloop before anything will happen.
 
 Options:
 
 =over
 
-=item port
+=item
 
-Specify a port which you would like the Gearman::Server to listen on for TCP connections (not necessary, but useful)
+port
+
+Specify a port which you would like the B<Gearman::Server> to listen on for TCP connections (not necessary, but useful)
+
+=item
+
+wakeup
+
+Number of workers to wake up per job inserted into the queue.
+
+Zero (0) is a perfectly acceptable answer, and can be used if you don't care much about job latency.
+This would bank on the base idea of a worker checking in with the server every so often.
+
+Negative One (-1) indicates that all sleeping workers should be woken up.
+
+All other negative numbers will cause the server to throw exception and not start.
+
+=item
+
+wakeup_delay
+
+Time interval before waking up more workers (the value specified by B<wakeup>) when jobs are still in
+the queue.
+
+Zero (0) means go as fast as possible, but not all at the same time. Similar to -1 on B<wakeup>, but
+is more cooperative in gearmand's multitasking model.
+
+Negative One (-1) means that this event won't happen, so only the initial workers will be woken up to
+handle jobs in the queue.
 
 =back
 
