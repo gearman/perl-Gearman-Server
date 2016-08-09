@@ -239,11 +239,12 @@ sub clients {
 
 =head2 to_inprocess_server()
 
+Returns a socket that is connected to the server, we can then use this
+socket with a Gearman::Client::Async object to run clients and servers in the
+same thread.
+
 =cut
 
-# Returns a socket that is connected to the server, we can then use this
-# socket with a Gearman::Client::Async object to run clients and servers in the
-# same thread.
 sub to_inprocess_server {
     my $self = shift;
 
@@ -304,8 +305,11 @@ sub start_worker {
             or die "Unable to dup socketpair to STDOUT: $!";
         if (UNIVERSAL::isa($prog, "CODE")) {
             $prog->();
-            exit 0;    # shouldn't get here.  subref should exec.
-        }
+
+            # shouldn't get here.  subref should exec.
+            exit 0;
+        } ## end if (UNIVERSAL::isa($prog...))
+
         exec $prog;
         die "Exec failed: $!";
     } ## end unless ($pid)
@@ -332,8 +336,9 @@ sub enqueue_job {
     my $jq = ($self->{job_queue}{ $job->{func} } ||= []);
 
     if (defined(my $max_queue_size = $self->{max_queue}{ $job->{func} })) {
-        $max_queue_size
-            --;    # Subtract one, because we're about to add one more below.
+
+        # Subtract one, because we're about to add one more below.
+        $max_queue_size--;
         while (@$jq > $max_queue_size) {
             my $delete_job = pop @$jq;
             my $msg        = Gearman::Util::pack_res_command("work_fail",
@@ -502,9 +507,24 @@ sub note_job_finished {
 
 =head2 set_max_queue($func, $max)
 
+=over
+
+=item
+
+$func
+
+function name
+
+=item
+
+$max
+
+0/undef/"" to reset. else integer max depth.
+
+=back
+
 =cut
 
-# <0/undef/"" to reset.  else integer max depth.
 sub set_max_queue {
     my ($self, $func, $max) = @_;
     if (defined $max && length $max && $max >= 0) {
