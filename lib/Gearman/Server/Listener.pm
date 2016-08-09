@@ -9,8 +9,12 @@ use warnings;
 
 Gearman::Server::Listener - a listener for L<Gearman::Server>
 
+=head1 DESCRIPTION
+
+Based on L<Danga::Socket>
+
 =cut
-# =head1 DESCRIPTION
+
 use base 'Danga::Socket';
 use fields qw/
     server
@@ -59,6 +63,8 @@ sub new {
 } ## end sub new
 
 =head2 event_read()
+
+wait for connection
 
 =cut
 sub event_read {
