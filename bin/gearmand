@@ -123,12 +123,12 @@ use Scalar::Util ();
 use vars qw($DEBUG);
 
 $DEBUG = 0;
-my $conf_port = 4730;
+my $port = 4730;
 
 GetOptions(
     'd|daemonize'    => \my $daemonize,
-    'p|port=i'       => \$conf_port,
-    'listen|L=s'     => \my $conf_host,
+    'p|port=i'       => \$port,
+    'listen|L=s'     => \my $listen,
     'debug=i'        => \$DEBUG,
     'pidfile=s'      => \my $opt_pidfile,
     'accept=i'       => \my $accept,
@@ -160,9 +160,9 @@ my $server = Gearman::Server->new(
     wakeup_delay => $wakeup_delay,
 );
 my $ssock = $server->create_listening_sock(
-    $conf_port,
+    $port,
     accept_per_loop => $accept,
-    local_addr      => $conf_host
+    local_addr      => $listen
 );
 
 if ($opt_pidfile) {
