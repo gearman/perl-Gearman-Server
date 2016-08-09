@@ -535,7 +535,7 @@ $max
 
 sub set_max_queue {
     my ($self, $func, $max) = @_;
-    if (defined $max && length $max && $max >= 0) {
+    if (defined($max) && length($max) && $max > 0) {
         $self->{max_queue}{$func} = int($max);
     }
     else {
