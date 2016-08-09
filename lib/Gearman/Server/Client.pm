@@ -7,7 +7,7 @@ use warnings;
 
 =head1 NAME
 
-Gearman::Server::Client - client for gearmand
+Gearman::Server::Client - client for L<gearmand> based on L<Gearman::Server>
 
 =head1 DESCRIPTION
 
@@ -155,9 +155,10 @@ sub close {
 
 =head2 event_read()
 
+read from socket
+
 =cut
 
-# Client
 sub event_read {
     my Gearman::Server::Client $self = shift;
 
@@ -242,9 +243,10 @@ sub event_write {
 
 =head2 process_line($line)
 
+Line based command processor
+
 =cut
 
-# Line based command processor
 sub process_line {
     my Gearman::Server::Client $self = shift;
     my $line = shift;
