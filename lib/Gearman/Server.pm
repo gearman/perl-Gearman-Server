@@ -161,7 +161,7 @@ sub new {
 sub debug {
     my ($self, $msg) = @_;
 
-    #warn "$msg\n";
+    warn "$msg\n";
 }
 
 =head2 create_listening_sock($portnum, %options)
@@ -210,6 +210,8 @@ sub create_listening_sock {
 
 =head2 new_client($sock)
 
+init new L<Gearman::Server::Client> object and add it to internal clients map
+
 =cut
 
 sub new_client {
@@ -221,6 +223,10 @@ sub new_client {
 
 =head2 note_disconnected_client($client)
 
+delete the client from internal clients map
+
+B<return> deleted object
+
 =cut
 
 sub note_disconnected_client {
@@ -229,6 +235,8 @@ sub note_disconnected_client {
 }
 
 =head2 clients()
+
+B<return> internal clients map
 
 =cut
 
