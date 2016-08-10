@@ -1,8 +1,17 @@
 use strict;
 use warnings;
 
+use File::Spec;
+use FindBin qw/ $Bin /;
+use lib File::Spec->catdir($Bin, "lib");
+
 use IO::Socket::INET;
+use Socket qw/
+    IPPROTO_TCP
+    SOCK_STREAM
+    /;
 use Test::More;
+use Test::Gearman::Server qw/free_local_port/;
 
 my $mn = "Gearman::Server::Client";
 
@@ -11,7 +20,42 @@ use_ok($mn);
 
 isa_ok($mn, "Danga::Socket");
 
-# new_ok($mn, [IO::Socket::INET->new(), new_ok("Gearman::Server")]);
+subtest "new", sub {
+    my ($port, $la) = (free_local_port());
+    $port || plan skip_all => "couldn't find free port";
+
+    my $sock = new_ok(
+        "IO::Socket::INET",
+        [
+            LocalPort => $port,
+            Type      => SOCK_STREAM,
+            Proto     => IPPROTO_TCP,
+            Blocking  => 0,
+            Reuse     => 1,
+            Listen    => 1024,
+        ]
+    );
+    my $gs = new_ok("Gearman::Server");
+    my $gc = new_ok($mn, [$sock, $gs]);
+
+    foreach (qw/fast_buffer can_do_list/) {
+        isa_ok($gc->{$_}, "ARRAY", $_) && is(@{ $gc->{$_} }, 0, "$_ empty");
+    }
+
+    foreach (qw/can_do doing options/) {
+        isa_ok($gc->{$_}, "HASH", $_)
+            && is(keys(%{ $gc->{$_} }), 0, "$_ empty");
+    }
+
+    foreach (qw/sleeping can_do_iter jobs_done_since_sleep/) {
+        is($gc->{$_}, 0, "$_ = 0");
+    }
+
+    is($gc->{fast_read}, undef, "fast_read");
+    is($gc->{read_buf},  '',    "read_buf");
+    is($gc->{client_id}, '-',   "client_id");
+    is($gc->{server},    $gs,   "server");
+};
 
 done_testing;
 
