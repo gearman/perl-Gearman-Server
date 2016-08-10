@@ -14,14 +14,56 @@ use Test::More;
 use Test::Gearman::Server qw/free_local_port/;
 
 my $mn = "Gearman::Server::Client";
-
 use_ok("Gearman::Server");
 use_ok($mn);
-
 isa_ok($mn, "Danga::Socket");
 
+can_ok(
+    $mn, qw/
+        CMD_can_do
+        CMD_can_do_timeout
+        CMD_cant_do
+        CMD_echo_req
+        CMD_get_status
+        CMD_grab_job
+        CMD_option_req
+        CMD_pre_sleep
+        CMD_reset_abilities
+        CMD_set_client_id
+        CMD_submit_job
+        CMD_submit_job_bg
+        CMD_submit_job_high
+        CMD_work_complete
+        CMD_work_exception
+        CMD_work_fail
+        CMD_work_status
+        TXTCMD_clients
+        TXTCMD_gladiator
+        TXTCMD_jobs
+        TXTCMD_maxqueue
+        TXTCMD_shutdown
+        TXTCMD_status
+        TXTCMD_version
+        TXTCMD_workers
+        _cmd_submit_job
+        _setup_can_do_list
+        close
+        error_packet
+        eurl
+        event_err
+        event_hup
+        event_read
+        event_write
+        option
+        process_line
+        process_cmd
+        res_packet
+        /
+);
+my ($gs, $gc) = (new_ok("Gearman::Server"));
+
 subtest "new", sub {
-    my ($port, $la) = (free_local_port());
+    my $port = free_local_port();
     $port || plan skip_all => "couldn't find free port";
 
     my $sock = new_ok(
@@ -35,8 +77,7 @@ subtest "new", sub {
             Listen    => 1024,
         ]
     );
-    my $gs = new_ok("Gearman::Server");
-    my $gc = new_ok($mn, [$sock, $gs]);
+    $gc = new_ok($mn, [$sock, $gs]);
 
     foreach (qw/fast_buffer can_do_list/) {
         isa_ok($gc->{$_}, "ARRAY", $_) && is(@{ $gc->{$_} }, 0, "$_ empty");
