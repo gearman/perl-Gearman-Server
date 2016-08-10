@@ -1,11 +1,9 @@
 use strict;
 use warnings;
 
+use File::Spec;
+use FindBin qw/ $Bin /;
 use IO::Socket::INET;
-use Test::More;
-use Test::Exception;
-use Sys::Hostname ();
-
 use Socket qw/
     IPPROTO_TCP
     SOL_SOCKET
@@ -14,6 +12,12 @@ use Socket qw/
     SOCK_STREAM
     PF_UNSPEC
     /;
+use Sys::Hostname ();
+use Test::Exception;
+use Test::More;
+
+use lib File::Spec->catdir($Bin, "lib");
+use Test::Gearman::Server qw/free_local_port/;
 
 my $mn = qw/
     Gearman::Server
@@ -86,7 +90,7 @@ subtest "new", sub {
 };
 
 subtest "create listening sock/new client", sub {
-    my $port = _free_port();
+    my $port = free_local_port();
     $port || plan skip_all => "couldn't find free port";
     my $gs = new_ok($mn);
     my ($accept, $la);
@@ -101,7 +105,7 @@ subtest "create listening sock/new client", sub {
 };
 
 subtest "client", sub {
-    my ($port, $la) = (_free_port());
+    my ($port, $la) = (free_local_port());
     $port || plan skip_all => "couldn't find free port";
 
     my $sock = new_ok(
@@ -136,26 +140,4 @@ subtest "maxqueue", sub {
 };
 
 done_testing;
-
-sub _free_port {
-    my ($la, $port) = shift;
-    my ($type, $retry, $sock) = ("tcp", 5);
-    $la ||= "127.0.0.1";
-    do {
-        unless ($port) {
-            $port = int(rand(10_000)) + int(rand(30_000));
-        }
-
-        IO::Socket::INET->new(
-            LocalAddr => $la,
-            LocalPort => $port,
-            Proto     => $type,
-            ReuseAddr => 1
-        ) or undef($port);
-
-    } until ($port || --$retry == 0);
-
-    return;
-    return $port;
-} ## end sub _free_port
 
