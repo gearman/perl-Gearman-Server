@@ -6,11 +6,7 @@ use FindBin qw/ $Bin /;
 use IO::Socket::INET;
 use Socket qw/
     IPPROTO_TCP
-    SOL_SOCKET
     SOCK_STREAM
-    AF_UNIX
-    SOCK_STREAM
-    PF_UNSPEC
     /;
 use Sys::Hostname ();
 use Test::Exception;
