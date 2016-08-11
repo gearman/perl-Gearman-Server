@@ -37,7 +37,7 @@ Default is
 
 Write a pidfile when starting up
 
-=item --debug=1
+=item --debug
 
 Enable debugging (currently the only debug output is when a client or worker connects).
 
@@ -126,14 +126,14 @@ $DEBUG = 0;
 my $port = 4730;
 
 GetOptions(
-    'd|daemonize'    => \my $daemonize,
-    'p|port=i'       => \$port,
-    'listen|L=s'     => \my $listen,
-    'debug=i'        => \$DEBUG,
-    'pidfile=s'      => \my $opt_pidfile,
     'accept=i'       => \my $accept,
-    'wakeup=i'       => \my $wakeup,
+    'debug'          => \$DEBUG,
+    'd|daemonize'    => \my $daemonize,
+    'listen|L=s'     => \my $listen,
+    'pidfile=s'      => \my $opt_pidfile,
+    'p|port=i'       => \$port,
     'wakeup-delay=f' => \my $wakeup_delay,
+    'wakeup=i'       => \my $wakeup,
     'version|V'      => sub {
         print "Gearman::Server $Gearman::Server::VERSION$/";
         exit;
@@ -186,8 +186,7 @@ sub shutdown_if_calm {
 }
 
 sub daemonize {
-    my ($pid, $sess_id, $i);
-
+    my ($pid, $sess_id);
     ## Fork and exit parent
     if ($pid = fork) { exit 0; }
 
@@ -200,20 +199,20 @@ sub daemonize {
     if ($pid = fork) { exit 0; }
 
     ## Change working directory
-    chdir "/";
+    chdir("/") || croak "can't chdir to /: $!";
 
     ## Clear file creation mask
     umask 0;
 
     ## Close open file descriptors
-    close(STDIN);
-    close(STDOUT);
-    close(STDERR);
+    close(STDIN)  || croak "can't close STDIN: $!";
+    close(STDOUT) || croak "can't close STDOUT: $!";
+    close(STDERR) || croak "can't close STDERR: $!";
 
     ## Reopen stderr, stdout, stdin to /dev/null
-    open(STDIN,  "+>/dev/null");
-    open(STDOUT, "+>&STDIN");
-    open(STDERR, "+>&STDIN");
+    open(STDIN,  "+>/dev/null") || croak "can't write to /dev/null: $!";
+    open(STDOUT, "+>&STDIN")    || croak "can't dup STDOUT to STDIN: $!";
+    open(STDERR, "+>&STDIN")    || croak "can't dup STDERR to STDIN: $!";
 } ## end sub daemonize
 
 kill 'USR1', $notify_pid if $notify_pid;
