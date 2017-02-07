@@ -149,10 +149,6 @@ GetOptions(
 
 daemonize() if $daemonize;
 
-# true if we've closed listening socket, and we're waiting for a
-# convenient place to kill the process
-our $graceful_shutdown = 0;
-
 # handled manually
 $SIG{'PIPE'} = "IGNORE";
 my $server = Gearman::Server->new(
@@ -169,20 +165,6 @@ if ($opt_pidfile) {
     open my $fh, '>', $opt_pidfile or die "Could not open $opt_pidfile: $!";
     print $fh "$$\n";
     close $fh;
-}
-
-sub shutdown_graceful {
-    return if $graceful_shutdown;
-
-    my $ofds = Danga::Socket->OtherFds;
-    delete $ofds->{ fileno($ssock) };
-    $ssock->close;
-    $graceful_shutdown = 1;
-    shutdown_if_calm();
-} ## end sub shutdown_graceful
-
-sub shutdown_if_calm {
-    exit 0 unless $server->jobs_outstanding;
 }
 
 sub daemonize {

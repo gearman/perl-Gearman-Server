@@ -146,10 +146,6 @@ sub note_finished {
     my $success = shift;
 
     $self->{server}->note_job_finished($self);
-
-    if ($Gearmand::graceful_shutdown) {
-        Gearmand::shutdown_if_calm();
-    }
 } ## end sub note_finished
 
 =head2 worker()

@@ -831,29 +831,6 @@ sub TXTCMD_maxqueue {
     $self->write("OK\n");
 } ## end sub TXTCMD_maxqueue
 
-=head2 "shutdown" ["graceful"]
-
-Close the server.  Or "shutdown graceful" to close the listening socket, then
-close the server when traffic has died away.
-
-=cut
-
-sub TXTCMD_shutdown {
-    my Gearman::Server::Client $self = shift;
-    my $args = shift;
-    if ($args eq "graceful") {
-        $self->write("OK\n");
-        Gearmand::shutdown_graceful();
-    }
-    elsif (!$args) {
-        $self->write("OK\n");
-        exit 0;
-    }
-    else {
-        $self->err_line('unknown_args');
-    }
-} ## end sub TXTCMD_shutdown
-
 =head2 "version"
 
 Returns server version.

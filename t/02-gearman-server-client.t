@@ -41,7 +41,6 @@ can_ok(
         TXTCMD_gladiator
         TXTCMD_jobs
         TXTCMD_maxqueue
-        TXTCMD_shutdown
         TXTCMD_status
         TXTCMD_version
         TXTCMD_workers
