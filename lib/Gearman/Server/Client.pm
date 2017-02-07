@@ -845,20 +845,26 @@ sub TXTCMD_version {
 sub err_line {
     my Gearman::Server::Client $self = shift;
     my $err_code                     = shift;
-    my $err_text                     = {
-        'unknown_command# numeric iterator for where we start looking for jobl'
-            => "Unknown server command",
-        'unknown_args' => "Unknown arguments to server command",
-        'incomplete_args' =>
-            "An incomplete set of arguments was sent to this command",
-    }->{$err_code};
+    my %err_text                     = (
 
-    $self->write("ERR $err_code " . eurl($err_text) . "\r\n");
+        # numeric iterator for where we start looking for jobl
+        unknown_command => "Unknown server command",
+        unknown_args    => "Unknown arguments to server command",
+        incomplete_args =>
+            "An incomplete set of arguments was sent to this command",
+    );
+
+    $self->write(
+        join '',
+        "ERR $err_code ",
+        eurl($err_text{$err_code}) || '', "\r\n"
+    );
     return 0;
 } ## end sub err_line
 
 sub eurl {
     my $a = $_[0];
+    $a || return;
     $a =~ s/([^a-zA-Z0-9_\,\-.\/\\\: ])/uc sprintf("%%%02x",ord($1))/eg;
     $a =~ tr/ /+/;
     return $a;
