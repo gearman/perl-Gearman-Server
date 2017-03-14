@@ -21,7 +21,6 @@ my $gs = Test::TCP->new(
     host => $host,
     code => sub {
         my ($port) = @_;
-        warn "port is: $port";
         exec $^X, join('', "-I", File::Spec->catdir($dir, "lib")), $bin,
             join('=', "--port", $port);
     }

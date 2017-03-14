@@ -1,6 +1,6 @@
 package Gearman::Server::Job;
-use version;
-$Gearman::Server::Job::VERSION = qv("v1.130.2");
+use version ();
+$Gearman::Server::Job::VERSION = version->declare("1.140_001");
 
 use strict;
 use warnings;

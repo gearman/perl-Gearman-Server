@@ -1,6 +1,6 @@
 package Gearman::Server;
-use version;
-$Gearman::Server::VERSION = qv("v1.130.2");
+use version ();
+$Gearman::Server::VERSION = version->declare("1.140_001");
 
 use strict;
 use warnings;

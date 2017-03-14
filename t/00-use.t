@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use version;
+use version ();
 use Test::More;
 use Test::Script;
 
@@ -12,7 +12,7 @@ my @mn = qw/
     Gearman::Server::Job
     /;
 
-my $v = qv("v1.130.2");
+my $v = version->declare("1.140_001");
 
 foreach my $n (@mn) {
     use_ok($n);
