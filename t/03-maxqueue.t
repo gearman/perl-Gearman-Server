@@ -7,7 +7,6 @@ use Gearman::Client;
 use Gearman::Worker;
 use IO::Socket::INET;
 use Net::EmptyPort ();
-use Proc::Guard;
 use Test::More;
 use Test::TCP;
 
@@ -19,10 +18,10 @@ my $bin = File::Spec->catdir($dir, "bin", "gearmand");
 -e $bin || plan skip_all => "no gearmand";
 
 my $gs = Test::TCP->new(
-    listen => 1,
-    host   => $host,
-    code   => sub {
+    host => $host,
+    code => sub {
         my ($port) = @_;
+        warn "port is: $port";
         exec $^X, join('', "-I", File::Spec->catdir($dir, "lib")), $bin,
             join('=', "--port", $port);
     }
@@ -37,25 +36,8 @@ subtest "set maxqueue", sub {
     my $k = "MAXQUEUE";
     my $cmd = join(' ', $k, $func, $count);
     ok($sock->write($cmd . $/), "write($cmd)");
-    sleep(2);
     ok(my $r = $sock->getline(), "getline");
     ok($r =~ m/^OK\b/i, "match OK");
 };
 
-subtest "start worker", sub {
-    my $gw = new_ok("Gearman::Worker", [job_servers => [$peer_addr]]);
-    $gw->register_function($func);
-
-    Proc::Guard->new(
-        code => sub {
-            $gw->work() while 1;
-        }
-    );
-};
-
-subtest "client", sub {
-    my $gc
-        = new_ok("Gearman::Client", [job_servers => [$peer_addr]]);
-    ok($gc->do_task($func));
-};
 done_testing();
