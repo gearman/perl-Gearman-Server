@@ -1,19 +1,16 @@
 use strict;
 use warnings;
 
-use File::Spec;
-use FindBin qw/ $Bin /;
 use IO::Socket::INET;
 use Socket qw/
     IPPROTO_TCP
     SOCK_STREAM
     /;
+
+use Net::EmptyPort qw/ empty_port /;
 use Sys::Hostname ();
 use Test::Exception;
 use Test::More;
-
-use lib File::Spec->catdir($Bin, "lib");
-use Test::Gearman::Server qw/free_local_port/;
 
 my $mn = qw/
     Gearman::Server
@@ -86,10 +83,8 @@ subtest "new", sub {
 };
 
 subtest "create listening sock/new client", sub {
-    my $port = free_local_port();
-    $port || plan skip_all => "couldn't find free port";
-    my $gs = new_ok($mn);
-    my ($accept, $la);
+    my $gs   = new_ok($mn);
+    my ($la, $port, $accept) = ("127.0.0.1", empty_port());
     ok(
         my $sock = $gs->create_listening_sock(
             $port,
@@ -101,7 +96,7 @@ subtest "create listening sock/new client", sub {
 };
 
 subtest "client", sub {
-    my ($port, $la) = (free_local_port());
+    my $port = empty_port();
     $port || plan skip_all => "couldn't find free port";
 
     my $sock = new_ok(

@@ -1,17 +1,13 @@
 use strict;
 use warnings;
 
-use File::Spec;
-use FindBin qw/ $Bin /;
-use lib File::Spec->catdir($Bin, "lib");
-
 use IO::Socket::INET;
+use Net::EmptyPort qw/ empty_port /;
 use Socket qw/
     IPPROTO_TCP
     SOCK_STREAM
     /;
 use Test::More;
-use Test::Gearman::Server qw/free_local_port/;
 
 my $mn = "Gearman::Server::Client";
 use_ok("Gearman::Server");
@@ -62,9 +58,7 @@ can_ok(
 my ($gs, $gc) = (new_ok("Gearman::Server"));
 
 subtest "new", sub {
-    my $port = free_local_port();
-    $port || plan skip_all => "couldn't find free port";
-
+    my $port = empty_port();
     my $sock = new_ok(
         "IO::Socket::INET",
         [
