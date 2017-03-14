@@ -1,3 +1,7 @@
+1.14_001 2017-03-14
+        * no more support for text command shutdown
+        * more tests
+
 1.13.002 2016-07-11
         * pod links to gearmand repaired
 
