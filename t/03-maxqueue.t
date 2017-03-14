@@ -3,8 +3,6 @@ use warnings;
 
 use File::Spec;
 use FindBin ();
-use Gearman::Client;
-use Gearman::Worker;
 use IO::Socket::INET;
 use Net::EmptyPort ();
 use Test::More;
