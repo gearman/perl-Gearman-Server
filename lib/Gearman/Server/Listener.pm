@@ -1,16 +1,41 @@
 package Gearman::Server::Listener;
+use version ();
+$Gearman::Server::Listener::VERSION = version->declare("1.140_001");
 
 use strict;
+use warnings;
+
+=head1 NAME
+
+Gearman::Server::Listener - a listener for L<Gearman::Server>
+
+=head1 DESCRIPTION
+
+Based on L<Danga::Socket>
+
+=cut
+
 use base 'Danga::Socket';
-use fields qw(server accept_per_loop);
+use fields qw/
+    server
+    accept_per_loop
+    /;
 
 use Errno qw(EAGAIN);
-use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET SO_ERROR);
+use Socket qw/
+    IPPROTO_TCP
+    TCP_NODELAY
+    SOL_SOCKET
+    SO_ERROR
+    /;
 
+=head1 METHODS
+
+=cut
 sub new {
     my Gearman::Server::Listener $self = shift;
-    my $sock = shift;
-    my $server = shift;
+    my $sock                           = shift;
+    my $server                         = shift;
 
     my %opts = @_;
 
@@ -19,7 +44,8 @@ sub new {
     warn "Extra options passed into new: " . join(', ', keys %opts) . "\n"
         if keys %opts;
 
-    $accept_per_loop = 10 unless defined $accept_per_loop and $accept_per_loop >= 1;
+    $accept_per_loop = 10
+        unless defined $accept_per_loop and $accept_per_loop >= 1;
 
     $self = fields::new($self) unless ref $self;
 
@@ -28,14 +54,19 @@ sub new {
 
     $self->SUPER::new($sock);
 
-    $self->{server} = $server;
+    $self->{server}          = $server;
     $self->{accept_per_loop} = int($accept_per_loop);
 
     $self->watch_read(1);
 
     return $self;
-}
+} ## end sub new
 
+=head2 event_read()
+
+wait for connection
+
+=cut
 sub event_read {
     my Gearman::Server::Listener $self = shift;
 
@@ -52,10 +83,11 @@ sub event_read {
 
         my $server = $self->{server};
 
-        $server->debug(sprintf("Listen child making a Client for %d.", fileno($csock)));
+        $server->debug(
+            sprintf("Listen child making a Client for %d.", fileno($csock)));
         $server->new_client($csock);
         return unless $remaining-- > 0;
-    }
+    } ## end while (my $csock = $listen_sock...)
 
     return if $! == EAGAIN;
 
@@ -63,9 +95,12 @@ sub event_read {
 
     $self->watch_read(0);
 
-    Danga::Socket->AddTimer( .1, sub {
-        $self->watch_read(1);
-    });
-}
+    Danga::Socket->AddTimer(
+        .1,
+        sub {
+            $self->watch_read(1);
+        }
+    );
+} ## end sub event_read
 
 1;
